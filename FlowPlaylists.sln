@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28809.33
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowPlaylists", "FlowPlaylists\FlowPlaylists.csproj", "{2DD37C13-F024-4B70-A7E2-F2FD1676DA13}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2DD37C13-F024-4B70-A7E2-F2FD1676DA13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DD37C13-F024-4B70-A7E2-F2FD1676DA13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DD37C13-F024-4B70-A7E2-F2FD1676DA13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DD37C13-F024-4B70-A7E2-F2FD1676DA13}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1080891A-0F13-469B-B015-2B1695EA6066}
+	EndGlobalSection
+EndGlobal
