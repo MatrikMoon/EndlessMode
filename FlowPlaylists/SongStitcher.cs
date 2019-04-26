@@ -14,25 +14,49 @@ namespace FlowPlaylists
     {
         public Queue<BeatmapLevelSO> Playlist { get; set; }
 
+        //Stitch related instances
+        [Inject]
         private GameplayCoreSceneSetup gameplayCoreSceneSetup;
-        private GameplayCoreSceneSetupData gameplayCoreSceneSetupData;
+
+        [Inject]
         private GamePauseManager gamePauseManager;
+
+        [Inject]
         private PauseMenuManager pauseMenuManager;
+
+        [Inject]
         private AudioTimeSyncController audioTimeSyncController;
+
+        [Inject]
         private BeatmapObjectSpawnController beatmapObjectSpawnController;
-        private BeatmapObjectCallbackController beatmapObjectCallbackController;
+
+        [Inject]
         private BeatmapDataModel beatmapDataModel;
+
+        private GameplayCoreSceneSetupData gameplayCoreSceneSetupData;
+
+        //Score related instances
+        [Inject]
+        private PrepareLevelCompletionResults prepareLevelCompletionResults;
+
+        [Inject]
+        private BeatmapObjectExecutionRatingsRecorder beatmapObjectExecutionRatingsRecorder;
+
+        [Inject]
+        private MultiplierValuesRecorder multiplierValuesRecorder;
+
+        [Inject]
+        private ScoreController scoreController;
+
+        [Inject]
+        private SaberActivityCounter saberActivityCounter;
 
         public void Start()
         {
-            gameplayCoreSceneSetup = Resources.FindObjectsOfTypeAll<GameplayCoreSceneSetup>().First();
             gameplayCoreSceneSetupData = gameplayCoreSceneSetup.GetProperty<GameplayCoreSceneSetupData>("sceneSetupData");
-            gamePauseManager = Resources.FindObjectsOfTypeAll<GamePauseManager>().First();
-            pauseMenuManager = gameplayCoreSceneSetup.GetField<PauseMenuManager>("_pauseMenuManager");
-            audioTimeSyncController = gameplayCoreSceneSetup.GetField<AudioTimeSyncController>("_audioTimeSyncController");
-            beatmapObjectSpawnController = gameplayCoreSceneSetup.GetField<BeatmapObjectSpawnController>("_beatmapObjectSpawnController");
-            beatmapObjectCallbackController = gameplayCoreSceneSetup.GetField<BeatmapObjectCallbackController>("_beatmapObjectCallbackController");
-            beatmapDataModel = gameplayCoreSceneSetup.GetField<BeatmapDataModel>("_beatmapDataModel");
+
+            //Since the first song in the playlist is the current song, we'll skip that
+            Playlist.Dequeue();
         }
 
         public void Update()
@@ -42,19 +66,23 @@ namespace FlowPlaylists
             //if (audioTimeSyncController.songTime > 10f && Playlist.Count > 0)
             if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && Playlist.Count > 0)
             {
+                //Submit score for the song which was just completed
+                var results = prepareLevelCompletionResults.FillLevelCompletionResults(LevelCompletionResults.LevelEndStateType.Cleared);
+                SubmitScore(results, gameplayCoreSceneSetupData.difficultyBeatmap);
+
+                //Clear out old data from objects that would have ideally been recreated
                 ClearOldData();
 
+                //Set up new song
                 var gameplayModifiers = gameplayCoreSceneSetupData.gameplayModifiers;
                 float songSpeedMul = gameplayModifiers.songSpeedMul;
 
                 BeatmapLevelSO level = Playlist.Dequeue();
-                
-                //Since the first song in the playlist is the current song, we'll skip that for our first exchange
-                if (level.levelID == gameplayCoreSceneSetupData.difficultyBeatmap.level.levelID) level = Playlist.Dequeue();
 
                 Action<IBeatmapLevel> SongLoaded = (loadedLevel) =>
                 {
                     IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level, BeatmapDifficulty.ExpertPlus);
+                    gameplayCoreSceneSetupData.SetField("_difficultyBeatmap", map);
                     BeatmapData beatmapData = BeatDataTransformHelper.CreateTransformedBeatmapData(map.beatmapData, gameplayModifiers, gameplayCoreSceneSetupData.practiceSettings, gameplayCoreSceneSetupData.playerSpecificSettings);
                     beatmapDataModel.beatmapData = beatmapData;
 
@@ -76,10 +104,77 @@ namespace FlowPlaylists
             }            
         }
 
+        private void SubmitScore(LevelCompletionResults results, IDifficultyBeatmap map)
+        {
+            var platformLeaderboardsModel = Resources.FindObjectsOfTypeAll<PlatformLeaderboardsModel>().First();
+            var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
+            playerDataModel.currentLocalPlayer.playerAllOverallStatsData.soloFreePlayOverallStatsData.UpdateWithLevelCompletionResults(results);
+            playerDataModel.Save();
+
+            PlayerDataModelSO.LocalPlayer currentLocalPlayer = playerDataModel.currentLocalPlayer;
+            GameplayModifiers gameplayModifiers = results.gameplayModifiers;
+            bool cleared = results.levelEndStateType == LevelCompletionResults.LevelEndStateType.Cleared;
+            string levelID = map.level.levelID;
+            BeatmapDifficulty difficulty = map.difficulty;
+            PlayerLevelStatsData playerLevelStatsData = currentLocalPlayer.GetPlayerLevelStatsData(levelID, difficulty, map.parentDifficultyBeatmapSet.beatmapCharacteristic);
+            bool isHighScore = playerLevelStatsData.highScore < results.score;
+            playerLevelStatsData.IncreaseNumberOfGameplays();
+            if (cleared && isHighScore)
+            {
+                playerLevelStatsData.UpdateScoreData(results.score, results.maxCombo, results.fullCombo, results.rank);
+                platformLeaderboardsModel.AddScore(map, results.unmodifiedScore, gameplayModifiers);
+                Logger.Success($"Score uploaded successfully! {map.level.songName} {results.score} ({results.unmodifiedScore})");
+            }
+        }
+
         private void ClearOldData()
         {
             //Wipe score data
+            beatmapObjectExecutionRatingsRecorder.GetField<List<BeatmapObjectExecutionRating>>("_beatmapObjectExecutionRatings").Clear();
+            beatmapObjectExecutionRatingsRecorder.GetField<HashSet<int>>("_hitObstacles").Clear();
+            beatmapObjectExecutionRatingsRecorder.GetField<List<ObstacleController>>("_prevIntersectingObstacles").Clear();
 
+            multiplierValuesRecorder.GetField<List<MultiplierValuesRecorder.MultiplierValue>>("_multiplierValues").Clear();
+
+            scoreController.SetField("_baseScore", 0);
+            scoreController.SetField("_prevFrameScore", 0);
+            scoreController.SetField("_multiplier", 0);
+            scoreController.SetField("_multiplierIncreaseProgress", 0);
+            scoreController.SetField("_multiplierIncreaseMaxProgress", 0);
+            scoreController.SetField("_combo", 0);
+            scoreController.SetField("_maxCombo", 0);
+            scoreController.SetField("_feverIsActive", false);
+            scoreController.SetField("_feverStartTime", 0f);
+            scoreController.SetField("_feverCombo", 0);
+            scoreController.SetField("_playerHeadWasInObstacle", false);
+            scoreController.SetField("_immediateMaxPossibleScore", 0);
+            scoreController.SetField("_cutOrMissedNotes", 0);
+            scoreController.GetField<List<AfterCutScoreBuffer>>("_afterCutScoreBuffers").Clear();
+            scoreController.SetField("_gameplayModifiersScoreMultiplier", 0);
+
+            saberActivityCounter.GetField<MovementHistoryRecorder>("_saberMovementHistoryRecorder").SetField("_accum", 0);
+            saberActivityCounter.GetField<MovementHistoryRecorder>("_handMovementHistoryRecorder").SetField("_accum", 0);
+
+            saberActivityCounter.saberMovementAveragingValueRecorder.GetField<Queue<AveragingValueRecorder.AverageValueData>>("_averageWindowValues").Clear();
+            saberActivityCounter.saberMovementAveragingValueRecorder.GetField<Queue<float>>("_historyValues").Clear();
+            saberActivityCounter.saberMovementAveragingValueRecorder.SetField("_time", 0);
+            saberActivityCounter.saberMovementAveragingValueRecorder.SetField("_historyTime", 0);
+            saberActivityCounter.saberMovementAveragingValueRecorder.SetField("_averageValue", 0);
+            saberActivityCounter.saberMovementAveragingValueRecorder.SetField("_averageWindowValuesDuration", 0);
+            saberActivityCounter.saberMovementAveragingValueRecorder.SetField("_lastValue", 0);
+
+            saberActivityCounter.handMovementAveragingValueRecorder.GetField<Queue<AveragingValueRecorder.AverageValueData>>("_averageWindowValues").Clear();
+            saberActivityCounter.handMovementAveragingValueRecorder.GetField<Queue<float>>("_historyValues").Clear();
+            saberActivityCounter.handMovementAveragingValueRecorder.SetField("_time", 0);
+            saberActivityCounter.handMovementAveragingValueRecorder.SetField("_historyTime", 0);
+            saberActivityCounter.handMovementAveragingValueRecorder.SetField("_averageValue", 0);
+            saberActivityCounter.handMovementAveragingValueRecorder.SetField("_averageWindowValuesDuration", 0);
+            saberActivityCounter.handMovementAveragingValueRecorder.SetField("_lastValue", 0);
+
+            saberActivityCounter.SetField("_leftSaberMovementDistance", 0);
+            saberActivityCounter.SetField("_rightSaberMovementDistance", 0);
+            saberActivityCounter.SetField("_leftHandMovementDistance", 0);
+            saberActivityCounter.SetField("_rightHandMovementDistance", 0);
 
             //Wipe notes
             var noteAPool = beatmapObjectSpawnController.GetField<NoteController.Pool>("_noteAPool");
