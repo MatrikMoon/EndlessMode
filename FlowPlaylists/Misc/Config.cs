@@ -1,9 +1,9 @@
-﻿using FlowPlaylists.SimpleJSON;
+﻿using FlowPlaylists.Misc.SimpleJSON;
 using System;
 using System.IO;
 using UnityEngine;
 
-namespace FlowPlaylists
+namespace FlowPlaylists.Misc
 {
     class Config
     {

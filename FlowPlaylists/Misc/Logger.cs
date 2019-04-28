@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FlowPlaylists
+namespace FlowPlaylists.Misc
 {
     class Logger
     {

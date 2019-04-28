@@ -111,7 +111,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace FlowPlaylists.SimpleJSON
+namespace FlowPlaylists.Misc.SimpleJSON
 {
     public enum JSONNodeType
     {

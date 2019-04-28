@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using FlowPlaylists.Misc;
 
 namespace FlowPlaylists.UI
 {
@@ -18,12 +17,15 @@ namespace FlowPlaylists.UI
 
         private static CountdownPanel instance;
 
-        public static CountdownPanel Create(List<BeatmapLevelSO> playlist)
+        public static CountdownPanel Create()
         {
             if (instance == null) instance = new GameObject("Countdown Panel").AddComponent<CountdownPanel>();
-            instance.timeRemaining = 0f;
-            playlist.ForEach(x => instance.timeRemaining += x.songDuration);
             return instance;
+        }
+
+        public void LevelsLoaded(Queue<IBeatmapLevel> levels)
+        {
+            levels.ToList().ForEach(x => instance.timeRemaining += x.songDuration);
         }
 
         public void Update()
@@ -48,12 +50,6 @@ namespace FlowPlaylists.UI
             mainCanvas.renderMode = RenderMode.WorldSpace;
             var canvasTransform = mainCanvas.transform as RectTransform;
             canvasTransform.sizeDelta = Config.Size;
-
-            var background = mainCanvas.gameObject.AddComponent<Image>();
-            var imageTransform = background.transform as RectTransform;
-            imageTransform.SetParent(mainCanvas.transform, false);
-            background.color = new Color(0f, 0f, 0f, 0.6f);
-            background.material = Resources.FindObjectsOfTypeAll<Material>().FirstOrDefault(x => x.name == "UINoGlow");
 
             var fontAsset = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().First((TMP_FontAsset x) => x.name == "Teko-Medium SDF No Glow");
 

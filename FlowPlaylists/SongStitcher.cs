@@ -7,12 +7,14 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Zenject;
+using FlowPlaylists.Misc;
+using Logger = FlowPlaylists.Misc.Logger;
 
 namespace FlowPlaylists
 {
     class SongStitcher : MonoBehaviour
     {
-        public Queue<BeatmapLevelSO> Playlist { get; set; }
+        private Queue<IBeatmapLevel> playlist;
 
         //Stitch related instances
         [Inject]
@@ -54,17 +56,22 @@ namespace FlowPlaylists
         public void Start()
         {
             gameplayCoreSceneSetupData = gameplayCoreSceneSetup.GetProperty<GameplayCoreSceneSetupData>("sceneSetupData");
+        }
+
+        public void LevelsLoaded(Queue<IBeatmapLevel> levels)
+        {
+            playlist = levels;
 
             //Since the first song in the playlist is the current song, we'll skip that
-            Playlist.Dequeue();
+            playlist.Dequeue();
         }
 
         public void Update()
         {
             if (gamePauseManager.pause) return; //Don't do anything if we're paused
 
-            //if (audioTimeSyncController.songTime > 10f && Playlist.Count > 0)
-            if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && Playlist.Count > 0)
+            //if (audioTimeSyncController.songTime > 10f && playlist.Count > 0)
+            if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && playlist.Count > 0)
             {
                 //Submit score for the song which was just completed
                 var results = prepareLevelCompletionResults.FillLevelCompletionResults(LevelCompletionResults.LevelEndStateType.Cleared);
@@ -77,11 +84,12 @@ namespace FlowPlaylists
                 var gameplayModifiers = gameplayCoreSceneSetupData.gameplayModifiers;
                 float songSpeedMul = gameplayModifiers.songSpeedMul;
 
-                BeatmapLevelSO level = Playlist.Dequeue();
+                IPreviewBeatmapLevel level = playlist.Dequeue();
 
                 Action<IBeatmapLevel> SongLoaded = (loadedLevel) =>
                 {
-                    IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level, BeatmapDifficulty.ExpertPlus);
+                    IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, BeatmapDifficulty.ExpertPlus);
+
                     gameplayCoreSceneSetupData.SetField("_difficultyBeatmap", map);
                     BeatmapData beatmapData = BeatDataTransformHelper.CreateTransformedBeatmapData(map.beatmapData, gameplayModifiers, gameplayCoreSceneSetupData.practiceSettings, gameplayCoreSceneSetupData.playerSpecificSettings);
                     beatmapDataModel.beatmapData = beatmapData;
@@ -99,7 +107,7 @@ namespace FlowPlaylists
                 }
                 else
                 {
-                    SongLoaded(level);
+                    SongLoaded(level as IBeatmapLevel);
                 }
             }            
         }

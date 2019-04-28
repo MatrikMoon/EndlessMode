@@ -1,0 +1,11 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/nike4613/ModSaber-MetadataFileSchema/master/Schema.json",
+  "author": "Moon",
+  "description": "Stitches songs together so that your entire playlist plays before you return to the menu",
+  "gameVersion": "0.13.2",
+  "id": "FlowPlaylists",
+  "name": "FlowPlaylists",
+  "version": "0.0.1",
+  "features": [
+  ]
+}

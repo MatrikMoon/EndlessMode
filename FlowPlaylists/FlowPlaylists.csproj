@@ -39,11 +39,11 @@
     <Reference Include="BeatSaberCustomUI">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Beat Saber\Plugins\BeatSaberCustomUI.dll</HintPath>
     </Reference>
-    <Reference Include="IllusionInjector">
-      <HintPath>D:\SteamLibrary\steamapps\common\Beat Saber\IPA_old\IllusionInjector.dll</HintPath>
+    <Reference Include="IPA.Injector">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\Managed\IPA.Injector.dll</HintPath>
     </Reference>
-    <Reference Include="IllusionPlugin">
-      <HintPath>D:\SteamLibrary\steamapps\common\Beat Saber\IPA_old\IllusionPlugin.dll</HintPath>
+    <Reference Include="IPA.Loader">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\Managed\IPA.Loader.dll</HintPath>
     </Reference>
     <Reference Include="SongBrowser, Version=3.0.5.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -103,6 +103,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Misc\Ryder.Lightweight.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="manifest.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
