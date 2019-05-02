@@ -17,28 +17,14 @@ namespace FlowPlaylists.Misc
             //First, look at the characteristic parameter. If there's something useful in there, we try to use it, but fall back to Standard
             var desiredCharacteristic = level.beatmapCharacteristics.FirstOrDefault(x => x.serializedName == (characteristic?.serializedName ?? "Standard")) ?? level.beatmapCharacteristics.First();
 
-            IDifficultyBeatmap[] availableMaps = null;
-            if (level is BeatmapLevelSO)
-            {
-                availableMaps =
-                    (level as BeatmapLevelSO)
-                    .difficultyBeatmapSets
-                    .FirstOrDefault(x => x.beatmapCharacteristic.serializedName == desiredCharacteristic.serializedName)
-                    .difficultyBeatmaps
-                    .OrderBy(x => x.difficulty)
-                    .ToArray();
-            }
-            else if (level is IBeatmapLevel) //Would be invalid for custom songs, but is only possible for previews; DLC
-            {
-                availableMaps = 
-                    level
-                    .beatmapLevelData
-                    .difficultyBeatmapSets
-                    .FirstOrDefault(x => x.beatmapCharacteristic.serializedName == desiredCharacteristic.serializedName)
-                    .difficultyBeatmaps
-                    .OrderBy(x => x.difficulty)
-                    .ToArray();
-            }
+            IDifficultyBeatmap[] availableMaps =
+                level
+                .beatmapLevelData
+                .difficultyBeatmapSets
+                .FirstOrDefault(x => x.beatmapCharacteristic.serializedName == desiredCharacteristic.serializedName)
+                .difficultyBeatmaps
+                .OrderBy(x => x.difficulty)
+                .ToArray();
 
             IDifficultyBeatmap ret = availableMaps.FirstOrDefault(x => x.difficulty == difficulty);
 

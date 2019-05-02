@@ -1,5 +1,6 @@
 ﻿#pragma warning disable 0649
 
+using FlowPlaylists.Misc;
 using SongLoaderPlugin;
 using SongLoaderPlugin.OverrideClasses;
 using System;
@@ -7,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Zenject;
-using FlowPlaylists.Misc;
 using Logger = FlowPlaylists.Misc.Logger;
 
 namespace FlowPlaylists
@@ -37,6 +37,10 @@ namespace FlowPlaylists
 
         private GameplayCoreSceneSetupData gameplayCoreSceneSetupData;
 
+        private NoteCutSoundEffectManager noteCutSoundEffectManager;
+
+        private bool _loadingSong = false;
+
         //Score related instances
         [Inject]
         private PrepareLevelCompletionResults prepareLevelCompletionResults;
@@ -56,11 +60,13 @@ namespace FlowPlaylists
         public void Start()
         {
             gameplayCoreSceneSetupData = gameplayCoreSceneSetup.GetProperty<GameplayCoreSceneSetupData>("sceneSetupData");
+            noteCutSoundEffectManager = gameplayCoreSceneSetup.GetField<NoteCutSoundEffectManager>("_noteCutSoundEffectManager");
         }
 
         public void LevelsLoaded(Queue<IBeatmapLevel> levels)
         {
-            playlist = levels;
+            Plugin.instance.levelsLoaded -= LevelsLoaded;
+            playlist = new Queue<IBeatmapLevel>(levels);
 
             //Since the first song in the playlist is the current song, we'll skip that
             playlist.Dequeue();
@@ -70,8 +76,8 @@ namespace FlowPlaylists
         {
             if (gamePauseManager.pause) return; //Don't do anything if we're paused
 
-            //if (audioTimeSyncController.songTime > 10f && playlist.Count > 0)
-            if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && playlist.Count > 0)
+            //if (audioTimeSyncController.songTime > 10f && playlist.Count > 0 && !_loadingSong)
+            if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && playlist.Count > 0 && !_loadingSong)
             {
                 //Submit score for the song which was just completed
                 var results = prepareLevelCompletionResults.FillLevelCompletionResults(LevelCompletionResults.LevelEndStateType.Cleared);
@@ -88,21 +94,25 @@ namespace FlowPlaylists
 
                 Action<IBeatmapLevel> SongLoaded = (loadedLevel) =>
                 {
-                    IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, BeatmapDifficulty.ExpertPlus);
+                    IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(loadedLevel as IBeatmapLevel, gameplayCoreSceneSetupData.difficultyBeatmap.difficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
+                    //IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, BeatmapDifficulty.ExpertPlus);
 
                     gameplayCoreSceneSetupData.SetField("_difficultyBeatmap", map);
                     BeatmapData beatmapData = BeatDataTransformHelper.CreateTransformedBeatmapData(map.beatmapData, gameplayModifiers, gameplayCoreSceneSetupData.practiceSettings, gameplayCoreSceneSetupData.playerSpecificSettings);
                     beatmapDataModel.beatmapData = beatmapData;
 
                     audioTimeSyncController.Init(map.level.beatmapLevelData.audioClip, 0f, map.level.songTimeOffset, songSpeedMul);
-                    beatmapObjectSpawnController.Init(level.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : map.difficulty.NoteJumpMovementSpeed(), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
+                    beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : map.difficulty.NoteJumpMovementSpeed(), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
                     pauseMenuManager.Init(map.level.songName, map.level.songSubName, map.difficulty.Name());
                     audioTimeSyncController.StartSong();
+
+                    _loadingSong = false;
                 };
 
                 //Load audio if it's custom
                 if (level is CustomLevel)
                 {
+                    _loadingSong = true;
                     SongLoader.Instance.LoadAudioClipForLevel((CustomLevel)level, SongLoaded);
                 }
                 else
@@ -138,17 +148,17 @@ namespace FlowPlaylists
         private void ClearOldData()
         {
             //Wipe score data
-            beatmapObjectExecutionRatingsRecorder.GetField<List<BeatmapObjectExecutionRating>>("_beatmapObjectExecutionRatings").Clear();
+            beatmapObjectExecutionRatingsRecorder.beatmapObjectExecutionRatings.Clear();
             beatmapObjectExecutionRatingsRecorder.GetField<HashSet<int>>("_hitObstacles").Clear();
             beatmapObjectExecutionRatingsRecorder.GetField<List<ObstacleController>>("_prevIntersectingObstacles").Clear();
 
             multiplierValuesRecorder.GetField<List<MultiplierValuesRecorder.MultiplierValue>>("_multiplierValues").Clear();
-
+            
             scoreController.SetField("_baseScore", 0);
             scoreController.SetField("_prevFrameScore", 0);
-            scoreController.SetField("_multiplier", 0);
+            scoreController.SetField("_multiplier", 1);
             scoreController.SetField("_multiplierIncreaseProgress", 0);
-            scoreController.SetField("_multiplierIncreaseMaxProgress", 0);
+            scoreController.SetField("_multiplierIncreaseMaxProgress", 2);
             scoreController.SetField("_combo", 0);
             scoreController.SetField("_maxCombo", 0);
             scoreController.SetField("_feverIsActive", false);
@@ -158,7 +168,6 @@ namespace FlowPlaylists
             scoreController.SetField("_immediateMaxPossibleScore", 0);
             scoreController.SetField("_cutOrMissedNotes", 0);
             scoreController.GetField<List<AfterCutScoreBuffer>>("_afterCutScoreBuffers").Clear();
-            scoreController.SetField("_gameplayModifiersScoreMultiplier", 0);
 
             saberActivityCounter.GetField<MovementHistoryRecorder>("_saberMovementHistoryRecorder").SetField("_accum", 0);
             saberActivityCounter.GetField<MovementHistoryRecorder>("_handMovementHistoryRecorder").SetField("_accum", 0);
@@ -183,6 +192,9 @@ namespace FlowPlaylists
             saberActivityCounter.SetField("_rightSaberMovementDistance", 0);
             saberActivityCounter.SetField("_leftHandMovementDistance", 0);
             saberActivityCounter.SetField("_rightHandMovementDistance", 0);
+
+            noteCutSoundEffectManager.SetField("_prevNoteATime", -1f);
+            noteCutSoundEffectManager.SetField("_prevNoteBTime", -1f);
 
             //Wipe notes
             var noteAPool = beatmapObjectSpawnController.GetField<NoteController.Pool>("_noteAPool");

@@ -1,10 +1,11 @@
-﻿using System;
+﻿using FlowPlaylists.Misc;
+using SongLoaderPlugin.OverrideClasses;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
-using FlowPlaylists.Misc;
+using Logger = FlowPlaylists.Misc.Logger;
 
 namespace FlowPlaylists.UI
 {
@@ -25,7 +26,9 @@ namespace FlowPlaylists.UI
 
         public void LevelsLoaded(Queue<IBeatmapLevel> levels)
         {
-            levels.ToList().ForEach(x => instance.timeRemaining += x.songDuration);
+            Plugin.instance.levelsLoaded -= LevelsLoaded;
+
+            foreach (var level in levels) timeRemaining += level.songDuration;
         }
 
         public void Update()
