@@ -1,4 +1,6 @@
-﻿using System;
+﻿using SongLoaderPlugin;
+using SongLoaderPlugin.OverrideClasses;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +30,13 @@ namespace FlowPlaylists.Misc
 
             IDifficultyBeatmap ret = availableMaps.FirstOrDefault(x => x.difficulty == difficulty);
 
+            if (ret is CustomLevel.CustomDifficultyBeatmap)
+            {
+                Logger.Debug($"{ret.level.songName} is a custom level, checking for requirements on {ret.difficulty}...");
+                if ((ret as CustomLevel.CustomDifficultyBeatmap).requirements.Any(x => !SongLoader.capabilities.Contains(x))) ret = null;
+                Logger.Debug((ret == null ? "Requirement not met." : "Requirement met!"));
+            }
+
             if (ret == null)
             {
                 ret = GetLowerDifficulty(availableMaps, difficulty, desiredCharacteristic);
@@ -43,13 +52,27 @@ namespace FlowPlaylists.Misc
         //Returns the next-lowest difficulty to the one provided
         private static IDifficultyBeatmap GetLowerDifficulty(IDifficultyBeatmap[] availableMaps, BeatmapDifficulty difficulty, BeatmapCharacteristicSO characteristic)
         {
-            return availableMaps.TakeWhile(x => x.difficulty < difficulty).LastOrDefault();
+            var ret = availableMaps.TakeWhile(x => x.difficulty < difficulty).LastOrDefault();
+            if (ret is CustomLevel.CustomDifficultyBeatmap)
+            {
+                Logger.Debug($"{ret.level.songName} is a custom level, checking for requirements on {ret.difficulty}...");
+                if ((ret as CustomLevel.CustomDifficultyBeatmap).requirements.Any(x => !SongLoader.capabilities.Contains(x))) ret = null;
+                Logger.Debug((ret == null ? "Requirement not met." : "Requirement met!"));
+            }
+            return ret;
         }
 
         //Returns the next-highest difficulty to the one provided
         private static IDifficultyBeatmap GetHigherDifficulty(IDifficultyBeatmap[] availableMaps, BeatmapDifficulty difficulty, BeatmapCharacteristicSO characteristic)
         {
-            return availableMaps.SkipWhile(x => x.difficulty < difficulty).FirstOrDefault();
+            var ret = availableMaps.SkipWhile(x => x.difficulty < difficulty).FirstOrDefault();
+            if (ret is CustomLevel.CustomDifficultyBeatmap)
+            {
+                Logger.Debug($"{ret.level.songName} is a custom level, checking for requirements on {ret.difficulty}...");
+                if ((ret as CustomLevel.CustomDifficultyBeatmap).requirements.Any(x => !SongLoader.capabilities.Contains(x))) ret = null;
+                Logger.Debug((ret == null ? "Requirement not met." : "Requirement met!"));
+            }
+            return ret;
         }
 
         public static async Task<bool> HasDLCLevel(string levelId, AdditionalContentModelSO additionalContentModel = null)
@@ -81,7 +104,6 @@ namespace FlowPlaylists.Misc
 
                 var token = getLevelCancellationTokenSource.Token;
 
-                //TODO: This seems to hang
                 BeatmapLevelLoader.LoadBeatmapLevelResult? result = null;
                 try
                 {

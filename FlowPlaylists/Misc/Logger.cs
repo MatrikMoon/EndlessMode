@@ -37,5 +37,13 @@ namespace FlowPlaylists.Misc
             Console.WriteLine(prefix + message);
             Console.ForegroundColor = originalColor;
         }
+
+        public static void Debug(string message)
+        {
+            ConsoleColor originalColor = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine(prefix + message);
+            Console.ForegroundColor = originalColor;
+        }
     }
 }

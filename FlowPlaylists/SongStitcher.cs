@@ -57,10 +57,14 @@ namespace FlowPlaylists
         [Inject]
         private SaberActivityCounter saberActivityCounter;
 
+        private StandardLevelDetailViewController levelDetailViewController;
+
         public void Start()
         {
             gameplayCoreSceneSetupData = gameplayCoreSceneSetup.GetProperty<GameplayCoreSceneSetupData>("sceneSetupData");
             noteCutSoundEffectManager = gameplayCoreSceneSetup.GetField<NoteCutSoundEffectManager>("_noteCutSoundEffectManager");
+            levelDetailViewController = Resources.FindObjectsOfTypeAll<StandardLevelDetailViewController>().First();
+            standardLevelGameplayManager = Resources.FindObjectsOfTypeAll<StandardLevelGameplayManager>().First();
         }
 
         public void LevelsLoaded(Queue<IBeatmapLevel> levels)
@@ -79,9 +83,13 @@ namespace FlowPlaylists
             //if (audioTimeSyncController.songTime > 10f && playlist.Count > 0 && !_loadingSong)
             if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && playlist.Count > 0 && !_loadingSong)
             {
+                Logger.Debug("Switching song...");
+
                 //Submit score for the song which was just completed
                 var results = prepareLevelCompletionResults.FillLevelCompletionResults(LevelCompletionResults.LevelEndStateType.Cleared);
                 SubmitScore(results, gameplayCoreSceneSetupData.difficultyBeatmap);
+
+                Logger.Debug($"Current song: {gameplayCoreSceneSetupData.difficultyBeatmap.level.songName}");
 
                 //Clear out old data from objects that would have ideally been recreated
                 ClearOldData();
@@ -92,14 +100,25 @@ namespace FlowPlaylists
 
                 IPreviewBeatmapLevel level = playlist.Dequeue();
 
+                Logger.Debug($"New song: {level.songName}");
+
                 Action<IBeatmapLevel> SongLoaded = (loadedLevel) =>
                 {
+                    Logger.Debug($"Getting closest difficulty to {gameplayCoreSceneSetupData.difficultyBeatmap.difficulty} with characteristic {gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic}...");
                     IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(loadedLevel as IBeatmapLevel, gameplayCoreSceneSetupData.difficultyBeatmap.difficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
                     //IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, BeatmapDifficulty.ExpertPlus);
+
+                    Logger.Debug($"Got: {map.difficulty} ({map.parentDifficultyBeatmapSet.beatmapCharacteristic})");
 
                     gameplayCoreSceneSetupData.SetField("_difficultyBeatmap", map);
                     BeatmapData beatmapData = BeatDataTransformHelper.CreateTransformedBeatmapData(map.beatmapData, gameplayModifiers, gameplayCoreSceneSetupData.practiceSettings, gameplayCoreSceneSetupData.playerSpecificSettings);
                     beatmapDataModel.beatmapData = beatmapData;
+
+                    //If this is the last song, set up the viewcontrollers in a way that the proper data is displayed after the song
+                    var currentPack = levelDetailViewController.GetField<IBeatmapLevelPack>("_pack");
+                    var currentPlayer = levelDetailViewController.GetField<IPlayer>("_player");
+                    var currentShowPlayerStats = levelDetailViewController.GetField<bool>("_showPlayerStats");
+                    levelDetailViewController.SetData(currentPack, map.level, currentPlayer, currentShowPlayerStats);
 
                     audioTimeSyncController.Init(map.level.beatmapLevelData.audioClip, 0f, map.level.songTimeOffset, songSpeedMul);
                     beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : map.difficulty.NoteJumpMovementSpeed(), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
@@ -112,18 +131,28 @@ namespace FlowPlaylists
                 //Load audio if it's custom
                 if (level is CustomLevel)
                 {
+                    Logger.Debug("Loading custom song data...");
                     _loadingSong = true;
                     SongLoader.Instance.LoadAudioClipForLevel((CustomLevel)level, SongLoaded);
                 }
                 else
                 {
+                    Logger.Debug("Starting OST without songloader...");
                     SongLoaded(level as IBeatmapLevel);
                 }
-            }            
+            }
+            //else if (audioTimeSyncController.songTime > 10f && (playlist == null || playlist.Count <= 0) && !_loadingSong)
+            else if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && (playlist == null || playlist.Count <= 0))
+            {
+                _loadingSong = true; //Only show the following log message once
+                Logger.Debug($"Would have switched songs, but playlist was null ({playlist == null}) or empty ({playlist?.Count <= 0})");
+            }
         }
 
         private void SubmitScore(LevelCompletionResults results, IDifficultyBeatmap map)
         {
+            Logger.Debug($"Prepping to submit score for: {map.level.levelID} {results.unmodifiedScore} ({results.score})");
+
             var platformLeaderboardsModel = Resources.FindObjectsOfTypeAll<PlatformLeaderboardsModel>().First();
             var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
             playerDataModel.currentLocalPlayer.playerAllOverallStatsData.soloFreePlayOverallStatsData.UpdateWithLevelCompletionResults(results);
@@ -143,6 +172,7 @@ namespace FlowPlaylists
                 platformLeaderboardsModel.AddScore(map, results.unmodifiedScore, gameplayModifiers);
                 Logger.Success($"Score uploaded successfully! {map.level.songName} {results.score} ({results.unmodifiedScore})");
             }
+            else Logger.Debug("Player failed, or old score was greater than new score.");
         }
 
         private void ClearOldData()

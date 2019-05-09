@@ -122,6 +122,8 @@ namespace FlowPlaylists
             }
             else loadedLevels = new Queue<IBeatmapLevel>(newCollection.Select(x => x as IBeatmapLevel));
 
+            foreach (var level in loadedLevels) Logger.Debug($"LOADED LEVEL: {level.songName}");
+
             levelsLoaded?.Invoke(loadedLevels);
         }
 
