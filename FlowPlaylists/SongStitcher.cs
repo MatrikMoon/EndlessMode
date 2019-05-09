@@ -64,7 +64,6 @@ namespace FlowPlaylists
             gameplayCoreSceneSetupData = gameplayCoreSceneSetup.GetProperty<GameplayCoreSceneSetupData>("sceneSetupData");
             noteCutSoundEffectManager = gameplayCoreSceneSetup.GetField<NoteCutSoundEffectManager>("_noteCutSoundEffectManager");
             levelDetailViewController = Resources.FindObjectsOfTypeAll<StandardLevelDetailViewController>().First();
-            standardLevelGameplayManager = Resources.FindObjectsOfTypeAll<StandardLevelGameplayManager>().First();
         }
 
         public void LevelsLoaded(Queue<IBeatmapLevel> levels)
