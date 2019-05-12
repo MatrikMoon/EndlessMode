@@ -40,10 +40,12 @@ namespace FlowPlaylists.Misc
 
         public static void Debug(string message)
         {
+#if DEBUG
             ConsoleColor originalColor = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Blue;
             Console.WriteLine(prefix + message);
             Console.ForegroundColor = originalColor;
+#endif
         }
     }
 }
