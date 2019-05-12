@@ -1,5 +1,4 @@
 ﻿using FlowPlaylists.Misc;
-using SongLoaderPlugin.OverrideClasses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +11,13 @@ namespace FlowPlaylists.UI
     class CountdownPanel : MonoBehaviour
     {
         private Canvas mainCanvas;
+        private TextMeshProUGUI titleText;
         private TextMeshProUGUI timeText;
         private GamePauseManager gamePauseManager;
         private float timeRemaining = 0f;
+        private int songsRemaining = 0;
+
+        private void SongsSwitched(IDifficultyBeatmap oldMap, IDifficultyBeatmap newMap) => songsRemaining--;
 
         private static CountdownPanel instance;
 
@@ -28,15 +31,36 @@ namespace FlowPlaylists.UI
         {
             Plugin.instance.levelsLoaded -= LevelsLoaded;
 
-            foreach (var level in levels) timeRemaining += level.songDuration;
+            songsRemaining = levels.Count;
+
+            foreach (var level in levels)
+            {
+                //If there's a level with duration 0.001, we know it's not loaded yet, and we can't get an accurate
+                //reading of the entire playlist time. We'll fall back to showing the number of songs remaining instead
+                if (level.songDuration <= 0.001f)
+                {
+                    timeRemaining = 0f;
+                    SongStitcher.songSwitched += SongsSwitched;
+                    break;
+                }
+                timeRemaining += level.songDuration;
+            }
         }
 
         public void Update()
         {
             if (gamePauseManager.pause) return; //Don't do anything if we're paused
 
-            timeRemaining -= Time.deltaTime;
-            timeText.text = $"{TimeSpan.FromSeconds(timeRemaining).ToString(@"hh\:mm\:ss")}";
+            if (timeRemaining > 0f)
+            {
+                timeRemaining -= Time.deltaTime;
+                timeText.text = $"{TimeSpan.FromSeconds(timeRemaining).ToString(@"hh\:mm\:ss")}";
+            }
+            else
+            {
+                titleText.text = "Songs remaining:";
+                timeText.text = $"{songsRemaining}";
+            }
         }
 
         private void Awake()
@@ -58,7 +82,7 @@ namespace FlowPlaylists.UI
 
             var titleGameObject = new GameObject("Countdown Title");
             titleGameObject.SetActive(false);
-            var titleText = titleGameObject.AddComponent<TextMeshProUGUI>();
+            titleText = titleGameObject.AddComponent<TextMeshProUGUI>();
             var textTransform = titleText.transform as RectTransform;
             titleText.font = fontAsset;
             textTransform.SetParent(mainCanvas.transform, false);
@@ -81,6 +105,11 @@ namespace FlowPlaylists.UI
             timeText.autoSizeTextContainer = true;
             timeText.alignment = TextAlignmentOptions.Center;
             timeGameObject.SetActive(true);
+        }
+
+        public virtual void OnDestroy()
+        {
+            SongStitcher.songSwitched -= SongsSwitched;
         }
     }
 }

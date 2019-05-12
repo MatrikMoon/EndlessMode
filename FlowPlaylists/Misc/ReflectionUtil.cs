@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using UnityEngine;
 
 namespace FlowPlaylists
 {
@@ -56,6 +57,28 @@ namespace FlowPlaylists
             return (obj is Type ? (Type)obj : (overrideType == null ? obj.GetType() : overrideType))
                 .GetMethod(methodName, _allBindingFlags)
                 .Invoke(obj, methodParams);
+        }
+
+        public static Behaviour CopyComponent(Behaviour original, Type originalType, Type overridingType, GameObject destination)
+        {
+            Behaviour behaviour = destination.AddComponent(overridingType) as Behaviour;
+            behaviour.enabled = false;
+            Type type = originalType;
+            while (type != typeof(MonoBehaviour))
+            {
+                CopyForType(type, original, behaviour);
+                type = type.BaseType;
+            }
+            behaviour.enabled = true;
+            return behaviour;
+        }
+
+        private static void CopyForType(Type type, Component source, Component destination)
+        {
+            foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.SetField))
+            {
+                fieldInfo.SetValue(destination, fieldInfo.GetValue(source));
+            }
         }
 
         //Returns a constructor with the specified parameters to the specified type or object

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 using Zenject;
 using Logger = FlowPlaylists.Misc.Logger;
 
@@ -14,6 +15,8 @@ namespace FlowPlaylists
 {
     class SongStitcher : MonoBehaviour
     {
+        public static event Action<IDifficultyBeatmap, IDifficultyBeatmap> songSwitched;
+
         private Queue<IBeatmapLevel> playlist;
 
         //Stitch related instances
@@ -38,6 +41,8 @@ namespace FlowPlaylists
         private GameplayCoreSceneSetupData gameplayCoreSceneSetupData;
 
         private NoteCutSoundEffectManager noteCutSoundEffectManager;
+
+        private ButtonBinder buttonBinder;
 
         private bool _loadingSong = false;
 
@@ -64,6 +69,14 @@ namespace FlowPlaylists
             gameplayCoreSceneSetupData = gameplayCoreSceneSetup.GetProperty<GameplayCoreSceneSetupData>("sceneSetupData");
             noteCutSoundEffectManager = gameplayCoreSceneSetup.GetField<NoteCutSoundEffectManager>("_noteCutSoundEffectManager");
             levelDetailViewController = Resources.FindObjectsOfTypeAll<StandardLevelDetailViewController>().First();
+
+            //Listen for restarts so that we can set up the playlist properly on restart
+            var restartButton = pauseMenuManager.GetField<Button>("_restartButton");
+            buttonBinder = new ButtonBinder();
+            buttonBinder.AddBinding(restartButton, () => {
+                playlist = new Queue<IBeatmapLevel>(playlist.Prepend(gameplayCoreSceneSetupData.difficultyBeatmap.level));
+                Plugin.instance.loadedLevels = playlist;
+            });
         }
 
         public void LevelsLoaded(Queue<IBeatmapLevel> levels)
@@ -95,6 +108,7 @@ namespace FlowPlaylists
 
                 //Set up new song
                 var gameplayModifiers = gameplayCoreSceneSetupData.gameplayModifiers;
+                var playerSpecificSettings = gameplayCoreSceneSetupData.playerSpecificSettings;
                 float songSpeedMul = gameplayModifiers.songSpeedMul;
 
                 IPreviewBeatmapLevel level = playlist.Dequeue();
@@ -103,6 +117,8 @@ namespace FlowPlaylists
 
                 Action<IBeatmapLevel> SongLoaded = (loadedLevel) =>
                 {
+                    var oldMap = gameplayCoreSceneSetupData.difficultyBeatmap;
+
                     Logger.Debug($"Getting closest difficulty to {gameplayCoreSceneSetupData.difficultyBeatmap.difficulty} with characteristic {gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic}...");
                     IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(loadedLevel as IBeatmapLevel, gameplayCoreSceneSetupData.difficultyBeatmap.difficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
                     //IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, BeatmapDifficulty.ExpertPlus);
@@ -122,7 +138,26 @@ namespace FlowPlaylists
                     audioTimeSyncController.Init(map.level.beatmapLevelData.audioClip, 0f, map.level.songTimeOffset, songSpeedMul);
                     beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : map.difficulty.NoteJumpMovementSpeed(), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
                     pauseMenuManager.Init(map.level.songName, map.level.songSubName, map.difficulty.Name());
+
+                    //Deal with characteristic issues
+                    Saber.SaberType saberType;
+                    if (gameplayCoreSceneSetup.UseOneSaberOnly(map.parentDifficultyBeatmapSet.beatmapCharacteristic, playerSpecificSettings, out saberType))
+                    {
+                        gameplayCoreSceneSetup.GetField<PlayerController>("_playerController").AllowOnlyOneSaber(saberType);
+                    }
+                    else
+                    {
+                        gameplayCoreSceneSetup
+                            .GetField<PlayerController>("_playerController")
+                            .GetField<SaberManager>("_saberManager")
+                            .SetField("_allowOnlyOneSaber", false);
+                    }
+
+                    Logger.Debug("Starting new song...");
                     audioTimeSyncController.StartSong();
+                    Logger.Debug("Song started!");
+
+                    songSwitched?.Invoke(oldMap, map);
 
                     _loadingSong = false;
                 };
@@ -148,8 +183,21 @@ namespace FlowPlaylists
             }
         }
 
-        private void SubmitScore(LevelCompletionResults results, IDifficultyBeatmap map)
+        private static bool BSUtilsScoreDisabled()
         {
+            return BS_Utils.Gameplay.ScoreSubmission.Disabled || BS_Utils.Gameplay.ScoreSubmission.ProlongedDisabled;
+        }
+
+        public static void SubmitScore(LevelCompletionResults results, IDifficultyBeatmap map)
+        {
+            
+            //If bs_utils disables score submission, we do too
+            if (IPA.Loader.PluginManager.AllPlugins.Any(x => x.Metadata.Name.ToLower() == "Beat Saber Utils".ToLower()))
+            {
+                Logger.Debug("Score submission disabled by bsutils");
+                if (BSUtilsScoreDisabled()) return;
+            }
+
             Logger.Debug($"Prepping to submit score for: {map.level.levelID} {results.unmodifiedScore} ({results.score})");
 
             var platformLeaderboardsModel = Resources.FindObjectsOfTypeAll<PlatformLeaderboardsModel>().First();
@@ -241,7 +289,7 @@ namespace FlowPlaylists
 
         public virtual void OnDestroy()
         {
-
+            buttonBinder?.ClearBindings();
         }
     }
 }
