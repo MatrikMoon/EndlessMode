@@ -15,7 +15,7 @@ namespace FlowPlaylists
     public class Plugin : IBeatSaberPlugin
     {
         public const string Name = "FlowPlaylists";
-        public const string Version = "0.0.3";
+        public const string Version = "0.0.5";
 
         public static Plugin instance;
         public Queue<IBeatmapLevel> loadedLevels;
@@ -93,11 +93,6 @@ namespace FlowPlaylists
                 Config.Enabled = b;
                 Config.SaveConfig();
             };
-        }
-
-        private void didPressGenerate()
-        {
-
         }
 
         private void didPressMissionPlay(MissionLevelDetailViewController standardLevelDetailViewController)

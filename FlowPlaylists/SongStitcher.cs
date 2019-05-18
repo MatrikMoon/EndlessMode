@@ -18,6 +18,7 @@ namespace FlowPlaylists
         public static event Action<IDifficultyBeatmap, IDifficultyBeatmap> songSwitched;
 
         private Queue<IBeatmapLevel> playlist;
+        private BeatmapDifficulty? preferredDifficulty;
 
         //Stitch related instances
         [Inject]
@@ -70,6 +71,8 @@ namespace FlowPlaylists
             noteCutSoundEffectManager = gameplayCoreSceneSetup.GetField<NoteCutSoundEffectManager>("_noteCutSoundEffectManager");
             levelDetailViewController = Resources.FindObjectsOfTypeAll<StandardLevelDetailViewController>().First();
 
+            if (preferredDifficulty == null) preferredDifficulty = gameplayCoreSceneSetupData.difficultyBeatmap.difficulty;
+
             //Listen for restarts so that we can set up the playlist properly on restart
             var restartButton = pauseMenuManager.GetField<Button>("_restartButton");
             buttonBinder = new ButtonBinder();
@@ -97,6 +100,8 @@ namespace FlowPlaylists
             {
                 Logger.Debug("Switching song...");
 
+                audioTimeSyncController.StopSong(); //If we don't, there's a chance the song would progress to `songLength - 0.2f` and the base game would finish the game scene
+
                 //Submit score for the song which was just completed
                 var results = prepareLevelCompletionResults.FillLevelCompletionResults(LevelCompletionResults.LevelEndStateType.Cleared);
                 SubmitScore(results, gameplayCoreSceneSetupData.difficultyBeatmap);
@@ -120,7 +125,7 @@ namespace FlowPlaylists
                     var oldMap = gameplayCoreSceneSetupData.difficultyBeatmap;
 
                     Logger.Debug($"Getting closest difficulty to {gameplayCoreSceneSetupData.difficultyBeatmap.difficulty} with characteristic {gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic}...");
-                    IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(loadedLevel as IBeatmapLevel, gameplayCoreSceneSetupData.difficultyBeatmap.difficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
+                    IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(loadedLevel as IBeatmapLevel, (BeatmapDifficulty)preferredDifficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
                     //IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, BeatmapDifficulty.ExpertPlus);
 
                     Logger.Debug($"Got: {map.difficulty} ({map.parentDifficultyBeatmapSet.beatmapCharacteristic})");
@@ -136,7 +141,7 @@ namespace FlowPlaylists
                     levelDetailViewController.SetData(currentPack, map.level, currentPlayer, currentShowPlayerStats);
 
                     audioTimeSyncController.Init(map.level.beatmapLevelData.audioClip, 0f, map.level.songTimeOffset, songSpeedMul);
-                    beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : map.difficulty.NoteJumpMovementSpeed(), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
+                    beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : map.noteJumpMovementSpeed, map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
                     pauseMenuManager.Init(map.level.songName, map.level.songSubName, map.difficulty.Name());
 
                     //Deal with characteristic issues
