@@ -126,7 +126,6 @@ namespace FlowPlaylists
 
                     Logger.Debug($"Getting closest difficulty to {gameplayCoreSceneSetupData.difficultyBeatmap.difficulty} with characteristic {gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic}...");
                     IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(loadedLevel as IBeatmapLevel, (BeatmapDifficulty)preferredDifficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
-                    //IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, BeatmapDifficulty.ExpertPlus);
 
                     Logger.Debug($"Got: {map.difficulty} ({map.parentDifficultyBeatmapSet.beatmapCharacteristic})");
 
@@ -141,7 +140,7 @@ namespace FlowPlaylists
                     levelDetailViewController.SetData(currentPack, map.level, currentPlayer, currentShowPlayerStats);
 
                     audioTimeSyncController.Init(map.level.beatmapLevelData.audioClip, 0f, map.level.songTimeOffset, songSpeedMul);
-                    beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : map.noteJumpMovementSpeed, map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
+                    beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : (map.noteJumpMovementSpeed == 0 ? map.difficulty.NoteJumpMovementSpeed() : map.noteJumpMovementSpeed), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
                     pauseMenuManager.Init(map.level.songName, map.level.songSubName, map.difficulty.Name());
 
                     //Deal with characteristic issues
@@ -230,6 +229,8 @@ namespace FlowPlaylists
         private void ClearOldData()
         {
             //Wipe score data
+            beatmapObjectSpawnController.SetField("_halfJumpDurationInBeats", 4f); //In the disassembly, it looks like this field is usually initialized to 1f, however in practice, when the game starts, it is always 4f. Blame Beat Games.
+
             beatmapObjectExecutionRatingsRecorder.beatmapObjectExecutionRatings.Clear();
             beatmapObjectExecutionRatingsRecorder.GetField<HashSet<int>>("_hitObstacles").Clear();
             beatmapObjectExecutionRatingsRecorder.GetField<List<ObstacleController>>("_prevIntersectingObstacles").Clear();
