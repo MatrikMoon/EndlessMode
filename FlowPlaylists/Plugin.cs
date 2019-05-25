@@ -15,11 +15,15 @@ namespace FlowPlaylists
     public class Plugin : IBeatSaberPlugin
     {
         public const string Name = "FlowPlaylists";
-        public const string Version = "0.0.5";
+        public const string Version = "0.0.6";
 
         public static Plugin instance;
         public Queue<IBeatmapLevel> loadedLevels;
         public event Action<Queue<IBeatmapLevel>> levelsLoaded;
+
+        //For the purpose of Replays
+        public static Scene MenuScene;
+        public static Scene GameScene;
 
         private FlowPlaylistsFlowCoordinator flowPlaylistsFlowCoordinator;
 
@@ -43,6 +47,9 @@ namespace FlowPlaylists
 
         public void OnActiveSceneChanged(Scene prevScene, Scene nextScene)
         {
+            if (nextScene.name == "GameCore") GameScene = nextScene;
+            if (nextScene.name == "MenuViewControllers") MenuScene = nextScene;
+
             if (Config.Enabled && nextScene.name == "GameCore")
             {
                 var stitcher = new GameObject("SongStitcher").AddComponent<SongStitcher>();

@@ -24,7 +24,7 @@ namespace FlowPlaylists.UI.FlowCoordinators
         private BeatmapLevelCollectionSO _primaryLevelCollection;
         private BeatmapLevelCollectionSO _secondaryLevelCollection;
         private BeatmapLevelCollectionSO _extrasLevelCollection;
-        private BeatmapLevelPackCollectionSO beatmapLevelPackCollection;
+        private IBeatmapLevelPackCollection beatmapLevelPackCollection;
 
         private static System.Random rand = new System.Random();
 
@@ -42,7 +42,7 @@ namespace FlowPlaylists.UI.FlowCoordinators
                 if (_primaryLevelCollection == null) _primaryLevelCollection = _additionalContentModel.alwaysOwnedPacks.First(x => x.packID == "OstVol1").beatmapLevelCollection as BeatmapLevelCollectionSO;
                 if (_secondaryLevelCollection == null) _secondaryLevelCollection = _additionalContentModel.alwaysOwnedPacks.First(x => x.packID == "OstVol2").beatmapLevelCollection as BeatmapLevelCollectionSO;
                 if (_extrasLevelCollection == null) _extrasLevelCollection = _additionalContentModel.alwaysOwnedPacks.First(x => x.packID == "Extras").beatmapLevelCollection as BeatmapLevelCollectionSO;
-                if (beatmapLevelPackCollection == null) beatmapLevelPackCollection = soloFreePlayFlowCoordinator.GetField<BeatmapLevelPackCollectionSO>("_levelPackCollection");
+                if (beatmapLevelPackCollection == null) beatmapLevelPackCollection = soloFreePlayFlowCoordinator.GetField<IBeatmapLevelPackCollection>("_levelPackCollection");
                 if (centerViewController == null)
                 {
                     centerViewController = BeatSaberUI.CreateViewController<CenterViewController>();
@@ -71,7 +71,7 @@ namespace FlowPlaylists.UI.FlowCoordinators
 
                             var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
                             MenuTransitionsHelperSO menuTransitionHelper = Resources.FindObjectsOfTypeAll<MenuTransitionsHelperSO>().FirstOrDefault();
-                            menuTransitionHelper.StartStandardLevel(firstMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, false, null, SongFinished);
+                            menuTransitionHelper.StartStandardLevel(firstMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, "Menu", false, null, SongFinished);
                         });
                     };
                 }
@@ -100,7 +100,7 @@ namespace FlowPlaylists.UI.FlowCoordinators
             {
                 var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
                 MenuTransitionsHelperSO menuTransitionHelper = Resources.FindObjectsOfTypeAll<MenuTransitionsHelperSO>().FirstOrDefault();
-                menuTransitionHelper.StartStandardLevel(currentMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, false, null, SongFinished);
+                menuTransitionHelper.StartStandardLevel(currentMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, "Menu", false, null, SongFinished);
             }
             else if (results.levelEndStateType == LevelCompletionResults.LevelEndStateType.Cleared)
             {

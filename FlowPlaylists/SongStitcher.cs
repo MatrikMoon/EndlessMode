@@ -202,7 +202,7 @@ namespace FlowPlaylists
                 if (BSUtilsScoreDisabled()) return;
             }
 
-            Logger.Debug($"Prepping to submit score for: {map.level.levelID} {results.unmodifiedScore} ({results.score})");
+            Logger.Debug($"Prepping to submit score for: {map.level.levelID} {results.rawScore} ({results.modifiedScore})");
 
             var platformLeaderboardsModel = Resources.FindObjectsOfTypeAll<PlatformLeaderboardsModel>().First();
             var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
@@ -215,13 +215,13 @@ namespace FlowPlaylists
             string levelID = map.level.levelID;
             BeatmapDifficulty difficulty = map.difficulty;
             PlayerLevelStatsData playerLevelStatsData = currentLocalPlayer.GetPlayerLevelStatsData(levelID, difficulty, map.parentDifficultyBeatmapSet.beatmapCharacteristic);
-            bool isHighScore = playerLevelStatsData.highScore < results.score;
+            bool isHighScore = playerLevelStatsData.highScore < results.modifiedScore;
             playerLevelStatsData.IncreaseNumberOfGameplays();
             if (cleared && isHighScore)
             {
-                playerLevelStatsData.UpdateScoreData(results.score, results.maxCombo, results.fullCombo, results.rank);
-                platformLeaderboardsModel.AddScore(map, results.unmodifiedScore, gameplayModifiers);
-                Logger.Success($"Score uploaded successfully! {map.level.songName} {results.score} ({results.unmodifiedScore})");
+                playerLevelStatsData.UpdateScoreData(results.modifiedScore, results.maxCombo, results.fullCombo, results.rank);
+                platformLeaderboardsModel.AddScore(map, results.rawScore, results.modifiedScore, gameplayModifiers);
+                Logger.Success($"Score uploaded successfully! {map.level.songName} {results.rawScore} ({results.modifiedScore})");
             }
             else Logger.Debug("Player failed, or old score was greater than new score.");
         }
@@ -237,8 +237,8 @@ namespace FlowPlaylists
 
             multiplierValuesRecorder.GetField<List<MultiplierValuesRecorder.MultiplierValue>>("_multiplierValues").Clear();
             
-            scoreController.SetField("_baseScore", 0);
-            scoreController.SetField("_prevFrameScore", 0);
+            scoreController.SetField("_baseRawScore", 0);
+            scoreController.SetField("_prevFrameRawScore", 0);
             scoreController.SetField("_multiplier", 1);
             scoreController.SetField("_multiplierIncreaseProgress", 0);
             scoreController.SetField("_multiplierIncreaseMaxProgress", 2);
@@ -248,12 +248,17 @@ namespace FlowPlaylists
             scoreController.SetField("_feverStartTime", 0f);
             scoreController.SetField("_feverCombo", 0);
             scoreController.SetField("_playerHeadWasInObstacle", false);
-            scoreController.SetField("_immediateMaxPossibleScore", 0);
+            scoreController.SetField("_immediateMaxPossibleRawScore", 0);
             scoreController.SetField("_cutOrMissedNotes", 0);
             scoreController.GetField<List<AfterCutScoreBuffer>>("_afterCutScoreBuffers").Clear();
 
             saberActivityCounter.GetField<MovementHistoryRecorder>("_saberMovementHistoryRecorder").SetField("_accum", 0);
             saberActivityCounter.GetField<MovementHistoryRecorder>("_handMovementHistoryRecorder").SetField("_accum", 0);
+            saberActivityCounter.SetField("_leftSaberMovementDistance", 0f);
+            saberActivityCounter.SetField("_rightSaberMovementDistance", 0f);
+            saberActivityCounter.SetField("_leftHandMovementDistance", 0f);
+            saberActivityCounter.SetField("_rightHandMovementDistance", 0f);
+            saberActivityCounter.SetField("_hasPrevPos", false);
 
             saberActivityCounter.saberMovementAveragingValueRecorder.GetField<Queue<AveragingValueRecorder.AverageValueData>>("_averageWindowValues").Clear();
             saberActivityCounter.saberMovementAveragingValueRecorder.GetField<Queue<float>>("_historyValues").Clear();
@@ -270,11 +275,6 @@ namespace FlowPlaylists
             saberActivityCounter.handMovementAveragingValueRecorder.SetField("_averageValue", 0);
             saberActivityCounter.handMovementAveragingValueRecorder.SetField("_averageWindowValuesDuration", 0);
             saberActivityCounter.handMovementAveragingValueRecorder.SetField("_lastValue", 0);
-
-            saberActivityCounter.SetField("_leftSaberMovementDistance", 0);
-            saberActivityCounter.SetField("_rightSaberMovementDistance", 0);
-            saberActivityCounter.SetField("_leftHandMovementDistance", 0);
-            saberActivityCounter.SetField("_rightHandMovementDistance", 0);
 
             noteCutSoundEffectManager.SetField("_prevNoteATime", -1f);
             noteCutSoundEffectManager.SetField("_prevNoteBTime", -1f);

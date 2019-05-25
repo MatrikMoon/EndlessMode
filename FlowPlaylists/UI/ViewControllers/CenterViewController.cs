@@ -50,7 +50,7 @@ namespace FlowPlaylists.UI.ViewControllers
                 {
                     PreferredDifficulty = (BeatmapDifficulty)(int)v;
                     Logger.Debug($"Preferred difficulty: {PreferredDifficulty}");
-                }, new Vector2(84, 9));
+                }, new Vector2(104, 9));
 
                 AddMultiSelectOption("Play <i>only</i> Preferred Difficulty", new Dictionary<float, string>
                 {
@@ -60,7 +60,7 @@ namespace FlowPlaylists.UI.ViewControllers
                 {
                     UseOnlyPreferredDifficulty = v == 1;
                     Logger.Debug($"Use only preferred difficulty: {UseOnlyPreferredDifficulty}");
-                }, new Vector2(84, -5));
+                }, new Vector2(104, -5));
 
                 //Help text
                 var helpText = BeatSaberUI.CreateText(rectTransform, "Welcome to FlowPlaylists!\nRemember: <color=\"green\">You can also enable FlowPlaylists as a Game Option on the left hand panel when you're in the song menu.</color>", new Vector2(0, 20f));
@@ -71,11 +71,11 @@ namespace FlowPlaylists.UI.ViewControllers
                 timeLabelText.enableWordWrapping = true;
                 timeLabelText.alignment = TextAlignmentOptions.Center;
 
-                var displayPositionX = 8f;
-                var displayPositionY = -12f;
+                var displayPositionX = 0f;
+                var displayPositionY = -13f;
                 
                 //Time selection text
-                timeText = BeatSaberUI.CreateText(rectTransform, "0  :  0   0", new Vector2(displayPositionX - 8.4f, displayPositionY + 3));
+                timeText = BeatSaberUI.CreateText(rectTransform, "0  :  0   0", new Vector2(displayPositionX - 2f, displayPositionY + 3));
                 timeText.autoSizeTextContainer = true;
                 timeText.fontSize = 12f;
 
@@ -165,7 +165,8 @@ namespace FlowPlaylists.UI.ViewControllers
             if (position == null) position = Vector2.zero;
             var originalUpArrow = Resources.FindObjectsOfTypeAll<Button>().Last(x => x.name == "PageUpButton");
 
-            var button = BeatSaberUI.CreateUIButton(parent, "SettingsButton", (Vector2)position, new Vector2(12.5f, 7.75f), pressed);
+            var button = BeatSaberUI.CreateUIButton(parent, "BeatmapEditorButton", (Vector2)position, new Vector2(12.5f, 7.75f), pressed);
+
             Destroy(button.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(x => x.name == "Text").gameObject);
             Destroy(button.GetComponentsInChildren<Image>().First(x => x.name == "Stroke"));
             var img = button.GetComponentsInChildren<Image>(true).FirstOrDefault(x => x.name == "Icon");
@@ -216,6 +217,7 @@ namespace FlowPlaylists.UI.ViewControllers
             valueTextTransform.Find("IncButton").transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
             valueTextTransform.localPosition -= new Vector3(71f, 5.3f);
             newListViewController.transform.localPosition = (Vector2)position;
+            newListViewController.Init();
 
             destinationObject.SetActive(true);
         }
