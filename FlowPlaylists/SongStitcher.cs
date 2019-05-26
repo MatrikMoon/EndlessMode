@@ -1,6 +1,6 @@
 ﻿#pragma warning disable 0649
 
-using FlowPlaylists.Misc;
+using EndlessMode.Misc;
 using SongLoaderPlugin;
 using SongLoaderPlugin.OverrideClasses;
 using System;
@@ -9,9 +9,9 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
-using Logger = FlowPlaylists.Misc.Logger;
+using Logger = EndlessMode.Misc.Logger;
 
-namespace FlowPlaylists
+namespace EndlessMode
 {
     class SongStitcher : MonoBehaviour
     {
@@ -48,9 +48,6 @@ namespace FlowPlaylists
         private bool _loadingSong = false;
 
         //Score related instances
-        [Inject]
-        private PrepareLevelCompletionResults prepareLevelCompletionResults;
-
         [Inject]
         private BeatmapObjectExecutionRatingsRecorder beatmapObjectExecutionRatingsRecorder;
 
@@ -101,10 +98,6 @@ namespace FlowPlaylists
                 Logger.Debug("Switching song...");
 
                 audioTimeSyncController.StopSong(); //If we don't, there's a chance the song would progress to `songLength - 0.2f` and the base game would finish the game scene
-
-                //Submit score for the song which was just completed
-                var results = prepareLevelCompletionResults.FillLevelCompletionResults(LevelCompletionResults.LevelEndStateType.Cleared);
-                SubmitScore(results, gameplayCoreSceneSetupData.difficultyBeatmap);
 
                 Logger.Debug($"Current song: {gameplayCoreSceneSetupData.difficultyBeatmap.level.songName}");
 
@@ -190,40 +183,6 @@ namespace FlowPlaylists
         private static bool BSUtilsScoreDisabled()
         {
             return BS_Utils.Gameplay.ScoreSubmission.Disabled || BS_Utils.Gameplay.ScoreSubmission.ProlongedDisabled;
-        }
-
-        public static void SubmitScore(LevelCompletionResults results, IDifficultyBeatmap map)
-        {
-            
-            //If bs_utils disables score submission, we do too
-            if (IPA.Loader.PluginManager.AllPlugins.Any(x => x.Metadata.Name.ToLower() == "Beat Saber Utils".ToLower()))
-            {
-                Logger.Debug("Score submission disabled by bsutils");
-                if (BSUtilsScoreDisabled()) return;
-            }
-
-            Logger.Debug($"Prepping to submit score for: {map.level.levelID} {results.rawScore} ({results.modifiedScore})");
-
-            var platformLeaderboardsModel = Resources.FindObjectsOfTypeAll<PlatformLeaderboardsModel>().First();
-            var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
-            playerDataModel.currentLocalPlayer.playerAllOverallStatsData.soloFreePlayOverallStatsData.UpdateWithLevelCompletionResults(results);
-            playerDataModel.Save();
-
-            PlayerDataModelSO.LocalPlayer currentLocalPlayer = playerDataModel.currentLocalPlayer;
-            GameplayModifiers gameplayModifiers = results.gameplayModifiers;
-            bool cleared = results.levelEndStateType == LevelCompletionResults.LevelEndStateType.Cleared;
-            string levelID = map.level.levelID;
-            BeatmapDifficulty difficulty = map.difficulty;
-            PlayerLevelStatsData playerLevelStatsData = currentLocalPlayer.GetPlayerLevelStatsData(levelID, difficulty, map.parentDifficultyBeatmapSet.beatmapCharacteristic);
-            bool isHighScore = playerLevelStatsData.highScore < results.modifiedScore;
-            playerLevelStatsData.IncreaseNumberOfGameplays();
-            if (cleared && isHighScore)
-            {
-                playerLevelStatsData.UpdateScoreData(results.modifiedScore, results.maxCombo, results.fullCombo, results.rank);
-                platformLeaderboardsModel.AddScore(map, results.rawScore, results.modifiedScore, gameplayModifiers);
-                Logger.Success($"Score uploaded successfully! {map.level.songName} {results.rawScore} ({results.modifiedScore})");
-            }
-            else Logger.Debug("Player failed, or old score was greater than new score.");
         }
 
         private void ClearOldData()

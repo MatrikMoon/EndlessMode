@@ -2,7 +2,7 @@
 using System.Reflection;
 using UnityEngine;
 
-namespace FlowPlaylists
+namespace EndlessMode
 {
     public static class ReflectionUtil
     {

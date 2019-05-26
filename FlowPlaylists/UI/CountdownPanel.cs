@@ -1,12 +1,12 @@
-﻿using FlowPlaylists.Misc;
+﻿using EndlessMode.Misc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
-using Logger = FlowPlaylists.Misc.Logger;
+using Logger = EndlessMode.Misc.Logger;
 
-namespace FlowPlaylists.UI
+namespace EndlessMode.UI
 {
     class CountdownPanel : MonoBehaviour
     {

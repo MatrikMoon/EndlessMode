@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace FlowPlaylists.Misc
+namespace EndlessMode.Misc
 {
     class Logger
     {
-        private const string prefix = "[FlowPlaylists]: ";
+        private static string prefix = $"[{Plugin.Name}]: ";
 
         public static void Error(string message)
         {

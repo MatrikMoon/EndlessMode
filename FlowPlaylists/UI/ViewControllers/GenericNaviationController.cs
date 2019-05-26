@@ -3,7 +3,7 @@ using System;
 using UnityEngine.UI;
 using VRUI;
 
-namespace FlowPlaylists.UI.ViewControllers
+namespace EndlessMode.UI.ViewControllers
 {
     class GenericNavigationController : VRUINavigationController
     {

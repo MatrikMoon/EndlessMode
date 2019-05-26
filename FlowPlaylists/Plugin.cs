@@ -1,31 +1,30 @@
-﻿using FlowPlaylists.Misc;
-using FlowPlaylists.UI;
-using FlowPlaylists.UI.FlowCoordinators;
+﻿using CustomUI.MenuButton;
+using EndlessMode.Misc;
+using EndlessMode.UI;
+using EndlessMode.UI.FlowCoordinators;
 using IPA;
+using SongLoaderPlugin;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Logger = FlowPlaylists.Misc.Logger;
+using Logger = EndlessMode.Misc.Logger;
 
-namespace FlowPlaylists
+namespace EndlessMode
 {
     public class Plugin : IBeatSaberPlugin
     {
-        public const string Name = "FlowPlaylists";
+        public const string Name = "EndlessMode";
         public const string Version = "0.0.6";
 
         public static Plugin instance;
         public Queue<IBeatmapLevel> loadedLevels;
         public event Action<Queue<IBeatmapLevel>> levelsLoaded;
 
-        //For the purpose of Replays
-        public static Scene MenuScene;
-        public static Scene GameScene;
-
-        private FlowPlaylistsFlowCoordinator flowPlaylistsFlowCoordinator;
+        private EndlessModeFlowCoordinator endlessModeFlowCoordinator;
+        private MenuButton menuButton;
 
         public Plugin() => instance = this;
 
@@ -47,9 +46,6 @@ namespace FlowPlaylists
 
         public void OnActiveSceneChanged(Scene prevScene, Scene nextScene)
         {
-            if (nextScene.name == "GameCore") GameScene = nextScene;
-            if (nextScene.name == "MenuViewControllers") MenuScene = nextScene;
-
             if (Config.Enabled && nextScene.name == "GameCore")
             {
                 var stitcher = new GameObject("SongStitcher").AddComponent<SongStitcher>();
@@ -69,6 +65,12 @@ namespace FlowPlaylists
             }
         }
 
+        private void SongsLoaded(SongLoader sender, List<SongLoaderPlugin.OverrideClasses.CustomLevel> loadedSongs)
+        {
+            SongLoader.SongsLoadedEvent -= SongsLoaded;
+            if (menuButton != null) menuButton.interactable = true;
+        }
+
         //Waits for menu scenes to be loaded then creates UI elements
         //Courtesy of BeatSaverDownloader
         private IEnumerator SetupUI()
@@ -84,10 +86,12 @@ namespace FlowPlaylists
 
             var mainFlowCoordinator = Resources.FindObjectsOfTypeAll<MainFlowCoordinator>().First();
 
-            if (flowPlaylistsFlowCoordinator == null) flowPlaylistsFlowCoordinator = mainFlowCoordinator.gameObject.AddComponent<FlowPlaylistsFlowCoordinator>();
+            if (endlessModeFlowCoordinator == null) endlessModeFlowCoordinator = mainFlowCoordinator.gameObject.AddComponent<EndlessModeFlowCoordinator>();
 
             var gameOption = CustomUI.GameplaySettings.GameplaySettingsUI.CreateToggleOption(CustomUI.GameplaySettings.GameplaySettingsPanels.ModifiersLeft, $"Enable {Name}", "When you press play, songs after the song you select will be stitched together into one", null, 0f);
-            var menuButton = CustomUI.MenuButton.MenuButtonUI.AddButton("FlowPlaylists", "Open FlowPlaylists Menu", () => flowPlaylistsFlowCoordinator.PresentUI(mainFlowCoordinator));
+            menuButton = MenuButtonUI.AddButton(Name, $"Open {Name} Menu", () => endlessModeFlowCoordinator.PresentUI(mainFlowCoordinator));
+            menuButton.interactable = SongLoader.AreSongsLoaded;
+            SongLoader.SongsLoadedEvent += SongsLoaded;
 
             Config.LoadConfig();
             gameOption.GetValue = Config.Enabled;
@@ -103,19 +107,10 @@ namespace FlowPlaylists
             levelsLoaded?.Invoke(null);
         }
 
-        private void BSUtilsDisableOtherPlugins()
-        {
-            BS_Utils.Gameplay.Gamemode.NextLevelIsIsolated("FlowPlaylists");
-            Logger.Debug("Disabled game-modifying plugins through bs_utils :)");
-        }
-
         private async void didPressPlay(StandardLevelDetailViewController standardLevelDetailViewController)
         {
-            if (IPA.Loader.PluginManager.AllPlugins.Any(x => x.Metadata.Name.ToLower() == "Beat Saber Utils".ToLower()))
-            {
-                BSUtilsDisableOtherPlugins();
-            }
-            else Logger.Debug("BSUtils not installed, not disabling other plugins");
+            //Disable score submission, for now
+            BS_Utils.Gameplay.ScoreSubmission.DisableSubmission(Name);
 
             var currentView = Resources.FindObjectsOfTypeAll<LevelPackLevelsTableView>().First();
             var currentPack = currentView.GetField<IBeatmapLevelPack>("_pack");

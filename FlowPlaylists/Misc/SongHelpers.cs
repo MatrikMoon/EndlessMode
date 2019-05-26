@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace FlowPlaylists.Misc
+namespace EndlessMode.Misc
 {
     class SongHelpers
     {

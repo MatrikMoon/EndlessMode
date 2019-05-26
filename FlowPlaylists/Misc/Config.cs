@@ -1,9 +1,9 @@
-﻿using FlowPlaylists.Misc.SimpleJSON;
+﻿using EndlessMode.Misc.SimpleJSON;
 using System;
 using System.IO;
 using UnityEngine;
 
-namespace FlowPlaylists.Misc
+namespace EndlessMode.Misc
 {
     class Config
     {
@@ -13,7 +13,7 @@ namespace FlowPlaylists.Misc
         public static Vector3 Size { get; set; }
         public static Vector3 Scale { get; set; }
 
-        private static string ConfigLocation = $"{Environment.CurrentDirectory}/UserData/FlowPlaylists.txt";
+        private static string ConfigLocation = $"{Environment.CurrentDirectory}/UserData/{Plugin.Name}.txt";
 
         public static void LoadConfig()
         {

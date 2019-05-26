@@ -1,6 +1,6 @@
 ﻿using CustomUI.BeatSaber;
-using FlowPlaylists.Misc;
-using FlowPlaylists.UI.ViewControllers;
+using EndlessMode.Misc;
+using EndlessMode.UI.ViewControllers;
 using SongLoaderPlugin;
 using SongLoaderPlugin.OverrideClasses;
 using System;
@@ -8,11 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using VRUI;
-using Logger = FlowPlaylists.Misc.Logger;
+using Logger = EndlessMode.Misc.Logger;
 
-namespace FlowPlaylists.UI.FlowCoordinators
+namespace EndlessMode.UI.FlowCoordinators
 {
-    class FlowPlaylistsFlowCoordinator : FlowCoordinator
+    class EndlessModeFlowCoordinator : FlowCoordinator
     {
         private IDifficultyBeatmap currentMap;
         private MainFlowCoordinator mainFlowCoordinator;
@@ -32,7 +32,7 @@ namespace FlowPlaylists.UI.FlowCoordinators
         {
             if (activationType == ActivationType.AddedToHierarchy)
             {
-                title = "FlowPlaylists";
+                title = Plugin.Name;
 
                 navigationController = BeatSaberUI.CreateViewController<GenericNavigationController>();
                 navigationController.didFinishEvent += (_) => mainFlowCoordinator.InvokeMethod("DismissFlowCoordinator", this, null, false);
@@ -101,10 +101,6 @@ namespace FlowPlaylists.UI.FlowCoordinators
                 var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
                 MenuTransitionsHelperSO menuTransitionHelper = Resources.FindObjectsOfTypeAll<MenuTransitionsHelperSO>().FirstOrDefault();
                 menuTransitionHelper.StartStandardLevel(currentMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, "Menu", false, null, SongFinished);
-            }
-            else if (results.levelEndStateType == LevelCompletionResults.LevelEndStateType.Cleared)
-            {
-                SongStitcher.SubmitScore(results, currentMap);
             }
         }
 

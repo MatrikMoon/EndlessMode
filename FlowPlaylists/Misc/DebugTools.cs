@@ -2,7 +2,7 @@
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace FlowPlaylists.Misc
+namespace EndlessMode.Misc
 {
     class DebugTools
     {

@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FlowPlaylists.Misc
+namespace EndlessMode.Misc
 {
     /// <summary>
     ///   Provides the ability to redirect calls from one method to another.

@@ -7,9 +7,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-using Logger = FlowPlaylists.Misc.Logger;
+using Logger = EndlessMode.Misc.Logger;
 
-namespace FlowPlaylists.UI.ViewControllers
+namespace EndlessMode.UI.ViewControllers
 {
     class CenterViewController : CustomViewController
     {
@@ -26,6 +26,8 @@ namespace FlowPlaylists.UI.ViewControllers
         private Image progressBar;
         private Image progressBarBackground;
         private Button generateButton;
+
+        private RectTransform t;
 
         public enum UIType
         {
@@ -50,7 +52,7 @@ namespace FlowPlaylists.UI.ViewControllers
                 {
                     PreferredDifficulty = (BeatmapDifficulty)(int)v;
                     Logger.Debug($"Preferred difficulty: {PreferredDifficulty}");
-                }, new Vector2(104, 9));
+                }, new Vector2(33, -4));
 
                 AddMultiSelectOption("Play <i>only</i> Preferred Difficulty", new Dictionary<float, string>
                 {
@@ -60,17 +62,23 @@ namespace FlowPlaylists.UI.ViewControllers
                 {
                     UseOnlyPreferredDifficulty = v == 1;
                     Logger.Debug($"Use only preferred difficulty: {UseOnlyPreferredDifficulty}");
-                }, new Vector2(104, -5));
+                }, new Vector2(33, -18));
 
                 //Help text
-                var helpText = BeatSaberUI.CreateText(rectTransform, "Welcome to FlowPlaylists!\nRemember: <color=\"green\">You can also enable FlowPlaylists as a Game Option on the left hand panel when you're in the song menu.</color>", new Vector2(0, 20f));
+                var helpText = BeatSaberUI.CreateText(rectTransform, $"Welcome to {Plugin.Name}!\nRemember: <color=\"green\">You can also enable {Plugin.Name} as a Game Option on the left hand panel when you're in the song menu.</color>", new Vector2(0, 20f));
                 helpText.enableWordWrapping = true;
                 helpText.alignment = TextAlignmentOptions.Center;
+
+                var disclaimer = BeatSaberUI.CreateText(rectTransform, $"<color=\"red\">Play responsibly! Remember to stay hydrated and always pause to take a break if you feel tired.</color>", new Vector2(-46f, -8f));
+                disclaimer.rectTransform.sizeDelta -= new Vector2(20f, 0);
+                disclaimer.enableWordWrapping = true;
+                disclaimer.alignment = TextAlignmentOptions.Center;
 
                 var timeLabelText = BeatSaberUI.CreateText(rectTransform, "Minimum time for generated playlist:", new Vector2(0, 5));
                 timeLabelText.enableWordWrapping = true;
                 timeLabelText.alignment = TextAlignmentOptions.Center;
 
+                //Display position presets
                 var displayPositionX = 0f;
                 var displayPositionY = -13f;
                 
@@ -83,6 +91,8 @@ namespace FlowPlaylists.UI.ViewControllers
                 AddArrowButton(rectTransform, () => {
                     if (hours < 9) hours++;
                     UpdateTimeText();
+                    
+                    Logger.Debug($"{t.sizeDelta.x} {t.sizeDelta.y}");
                 }, new Vector2(displayPositionX - 15, displayPositionY + 8));
 
                 AddArrowButton(rectTransform, () => {
@@ -111,7 +121,7 @@ namespace FlowPlaylists.UI.ViewControllers
                 }, new Vector2(displayPositionX + 10.7f, displayPositionY - 8), true);
 
                 //Playlist generate button
-                generateButton = BeatSaberUI.CreateUIButton(rectTransform, "QuitButton", new Vector2(0, -28), new Vector2(50, 10), () => GenerateButtonPressed?.Invoke(), "Generate random playlist");
+                generateButton = BeatSaberUI.CreateUIButton(rectTransform, "CreditsButton", new Vector2(0, -28), new Vector2(50, 10), () => GenerateButtonPressed?.Invoke(), "Generate random playlist");
 
                 //Progress bar
                 progressBarBackground = new GameObject().AddComponent<Image>();
@@ -205,6 +215,9 @@ namespace FlowPlaylists.UI.ViewControllers
                 return options[v];
             };
 
+            Polyglot.LocalizedTextMeshProUGUI localizer = newListViewController.GetComponentInChildren<Polyglot.LocalizedTextMeshProUGUI>();
+            if (localizer != null) Destroy(localizer);
+
             var valueTextTransform = newListViewController.gameObject.transform.Find("Value");
             var valueTextComponent = valueTextTransform.Find("ValueText").GetComponent<TMP_Text>();
             valueTextComponent.lineSpacing = -50f;
@@ -212,10 +225,11 @@ namespace FlowPlaylists.UI.ViewControllers
 
             var nameTextTransform = newListViewController.gameObject.transform.Find("NameText");
             nameTextTransform.localScale = new Vector3(0.85f, 0.85f, 0.85f);
+            nameTextTransform.localPosition += new Vector3(2f, 5f);
+            (nameTextTransform as RectTransform).sizeDelta = new Vector2(47f, 8f); 
             valueTextTransform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
             valueTextTransform.Find("DecButton").transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
             valueTextTransform.Find("IncButton").transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
-            valueTextTransform.localPosition -= new Vector3(71f, 5.3f);
             newListViewController.transform.localPosition = (Vector2)position;
             newListViewController.Init();
 
