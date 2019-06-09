@@ -17,7 +17,7 @@ namespace EndlessMode
     public class Plugin : IBeatSaberPlugin
     {
         public const string Name = "EndlessMode";
-        public const string Version = "0.0.6";
+        public const string Version = "0.0.7";
 
         public static Plugin instance;
         public Queue<IBeatmapLevel> loadedLevels;
@@ -110,7 +110,7 @@ namespace EndlessMode
         private async void didPressPlay(StandardLevelDetailViewController standardLevelDetailViewController)
         {
             //Disable score submission, for now
-            BS_Utils.Gameplay.ScoreSubmission.DisableSubmission(Name);
+            if (Config.Enabled) BS_Utils.Gameplay.ScoreSubmission.DisableSubmission(Name);
 
             var currentView = Resources.FindObjectsOfTypeAll<LevelPackLevelsTableView>().First();
             var currentPack = currentView.GetField<IBeatmapLevelPack>("_pack");

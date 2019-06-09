@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28809.33
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EndlessMode", "FlowPlaylists\EndlessMode.csproj", "{2DD37C13-F024-4B70-A7E2-F2FD1676DA13}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EndlessMode", "EndlessMode\EndlessMode.csproj", "{2DD37C13-F024-4B70-A7E2-F2FD1676DA13}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
