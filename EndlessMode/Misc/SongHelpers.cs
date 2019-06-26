@@ -1,6 +1,4 @@
 ﻿using SongCore;
-using SongLoaderPlugin;
-using SongLoaderPlugin.OverrideClasses;
 using System;
 using System.Linq;
 using System.Threading;
@@ -31,10 +29,10 @@ namespace EndlessMode.Misc
 
             IDifficultyBeatmap ret = availableMaps.FirstOrDefault(x => x.difficulty == difficulty);
 
-            if (ret is CustomLevel.CustomDifficultyBeatmap)
+            if (ret is CustomDifficultyBeatmap)
             {
                 var extras = Collections.RetrieveExtraSongData(ret.level.levelID);
-                var requirements = extras?.difficulties.First(x => x.difficulty == ret.difficulty).additionalDifficultyData.requirements;
+                var requirements = extras?._difficulties.First(x => x._difficulty == ret.difficulty).additionalDifficultyData._requirements;
                 Logger.Debug($"{ret.level.songName} is a custom level, checking for requirements on {ret.difficulty}...");
                 if (
                     (requirements?.Count() > 0) &&
@@ -59,10 +57,10 @@ namespace EndlessMode.Misc
         private static IDifficultyBeatmap GetLowerDifficulty(IDifficultyBeatmap[] availableMaps, BeatmapDifficulty difficulty, BeatmapCharacteristicSO characteristic)
         {
             var ret = availableMaps.TakeWhile(x => x.difficulty < difficulty).LastOrDefault();
-            if (ret is CustomLevel.CustomDifficultyBeatmap)
+            if (ret is CustomDifficultyBeatmap)
             {
                 var extras = Collections.RetrieveExtraSongData(ret.level.levelID);
-                var requirements = extras?.difficulties.First(x => x.difficulty == ret.difficulty).additionalDifficultyData.requirements;
+                var requirements = extras?._difficulties.First(x => x._difficulty == ret.difficulty).additionalDifficultyData._requirements;
                 Logger.Debug($"{ret.level.songName} is a custom level, checking for requirements on {ret.difficulty}...");
                 if (
                     (requirements?.Count() > 0) &&
@@ -77,10 +75,10 @@ namespace EndlessMode.Misc
         private static IDifficultyBeatmap GetHigherDifficulty(IDifficultyBeatmap[] availableMaps, BeatmapDifficulty difficulty, BeatmapCharacteristicSO characteristic)
         {
             var ret = availableMaps.SkipWhile(x => x.difficulty < difficulty).FirstOrDefault();
-            if (ret is CustomLevel.CustomDifficultyBeatmap)
+            if (ret is CustomDifficultyBeatmap)
             {
                 var extras = Collections.RetrieveExtraSongData(ret.level.levelID);
-                var requirements = extras?.difficulties.First(x => x.difficulty == ret.difficulty).additionalDifficultyData.requirements;
+                var requirements = extras?._difficulties.First(x => x._difficulty == ret.difficulty).additionalDifficultyData._requirements;
                 Logger.Debug($"{ret.level.songName} is a custom level, checking for requirements on {ret.difficulty}...");
                 if (
                     (requirements?.Count() > 0) &&
@@ -108,25 +106,23 @@ namespace EndlessMode.Misc
             return false;
         }
 
-        public static async Task<BeatmapLevelLoader.LoadBeatmapLevelResult?> GetDLCLevel(IPreviewBeatmapLevel level, BeatmapLevelsModelSO beatmapLevelsModel = null)
+        public static async Task<BeatmapLevelsModelSO.GetBeatmapLevelResult?> GetLevelFromPreview(IPreviewBeatmapLevel level, BeatmapLevelsModelSO beatmapLevelsModel = null)
         {
             beatmapLevelsModel = beatmapLevelsModel ?? Resources.FindObjectsOfTypeAll<BeatmapLevelsModelSO>().FirstOrDefault();
-            var beatmapLevelLoader = beatmapLevelsModel?.GetField<BeatmapLevelLoader>("_beatmapLevelLoader");
 
-            if (beatmapLevelLoader != null)
+            if (beatmapLevelsModel != null)
             {
                 getLevelCancellationTokenSource?.Cancel();
                 getLevelCancellationTokenSource = new CancellationTokenSource();
 
                 var token = getLevelCancellationTokenSource.Token;
 
-                BeatmapLevelLoader.LoadBeatmapLevelResult? result = null;
+                BeatmapLevelsModelSO.GetBeatmapLevelResult? result = null;
                 try
                 {
-                    result = await beatmapLevelLoader.LoadBeatmapLevelAsync(level, token);
+                    result = await beatmapLevelsModel.GetBeatmapLevelAsync(level.levelID, token);
                 }
                 catch (OperationCanceledException) {}
-
                 if (result?.isError == true || result?.beatmapLevel == null) return null; //Null out entirely in case of error
                 return result;
             }

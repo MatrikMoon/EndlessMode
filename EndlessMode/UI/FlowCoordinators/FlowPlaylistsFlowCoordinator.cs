@@ -1,8 +1,6 @@
 ﻿using CustomUI.BeatSaber;
 using EndlessMode.Misc;
 using EndlessMode.UI.ViewControllers;
-using SongLoaderPlugin;
-using SongLoaderPlugin.OverrideClasses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +18,7 @@ namespace EndlessMode.UI.FlowCoordinators
         private CenterViewController centerViewController;
 
         private SoloFreePlayFlowCoordinator soloFreePlayFlowCoordinator;
-        private AdditionalContentModelSO _additionalContentModel;
+        private AlwaysOwnedContentModelSO _alwaysOwnedContentModelSO;
         private BeatmapLevelCollectionSO _primaryLevelCollection;
         private BeatmapLevelCollectionSO _secondaryLevelCollection;
         private BeatmapLevelCollectionSO _extrasLevelCollection;
@@ -38,10 +36,10 @@ namespace EndlessMode.UI.FlowCoordinators
                 navigationController.didFinishEvent += (_) => mainFlowCoordinator.InvokeMethod("DismissFlowCoordinator", this, null, false);
 
                 if (soloFreePlayFlowCoordinator == null) soloFreePlayFlowCoordinator = Resources.FindObjectsOfTypeAll<SoloFreePlayFlowCoordinator>().First();
-                if (_additionalContentModel == null) _additionalContentModel = Resources.FindObjectsOfTypeAll<AdditionalContentModelSO>().First();
-                if (_primaryLevelCollection == null) _primaryLevelCollection = _additionalContentModel.alwaysOwnedPacks.First(x => x.packID == "OstVol1").beatmapLevelCollection as BeatmapLevelCollectionSO;
-                if (_secondaryLevelCollection == null) _secondaryLevelCollection = _additionalContentModel.alwaysOwnedPacks.First(x => x.packID == "OstVol2").beatmapLevelCollection as BeatmapLevelCollectionSO;
-                if (_extrasLevelCollection == null) _extrasLevelCollection = _additionalContentModel.alwaysOwnedPacks.First(x => x.packID == "Extras").beatmapLevelCollection as BeatmapLevelCollectionSO;
+                if (_alwaysOwnedContentModelSO == null) _alwaysOwnedContentModelSO = Resources.FindObjectsOfTypeAll<AlwaysOwnedContentModelSO>().First();
+                if (_primaryLevelCollection == null) _primaryLevelCollection = _alwaysOwnedContentModelSO.alwaysOwnedPacks.First(x => x.packID == "OstVol1").beatmapLevelCollection as BeatmapLevelCollectionSO;
+                if (_secondaryLevelCollection == null) _secondaryLevelCollection = _alwaysOwnedContentModelSO.alwaysOwnedPacks.First(x => x.packID == "OstVol2").beatmapLevelCollection as BeatmapLevelCollectionSO;
+                if (_extrasLevelCollection == null) _extrasLevelCollection = _alwaysOwnedContentModelSO.alwaysOwnedPacks.First(x => x.packID == "Extras").beatmapLevelCollection as BeatmapLevelCollectionSO;
                 if (beatmapLevelPackCollection == null) beatmapLevelPackCollection = soloFreePlayFlowCoordinator.GetField<IBeatmapLevelPackCollection>("_levelPackCollection");
                 if (centerViewController == null)
                 {
@@ -49,7 +47,7 @@ namespace EndlessMode.UI.FlowCoordinators
                     centerViewController.GenerateButtonPressed += () =>
                     {
                         centerViewController.SetUIType(CenterViewController.UIType.ProgressBar);
-                        GeneratePlaylistWithMinTime(centerViewController.GetTimeValue(), centerViewController.UseOnlyPreferredDifficulty ? centerViewController.PreferredDifficulty : (BeatmapDifficulty?)null, (playlist) =>
+                        GeneratePlaylistWithMinTime(centerViewController.GetTimeValue(), centerViewController.UseOnlyPreferredDifficulty ? centerViewController.PreferredDifficulty : (BeatmapDifficulty?)null, async (playlist) =>
                         {
                             var duration = 0f;
                             foreach (var song in playlist)
@@ -63,8 +61,20 @@ namespace EndlessMode.UI.FlowCoordinators
 
                             //Launch first level
                             Config.Enabled = true;
-                            Plugin.instance.loadedLevels = new Queue<IBeatmapLevel>(playlist);
-                            var firstMap = SongHelpers.GetClosestDifficultyPreferLower(Plugin.instance.loadedLevels.First(), centerViewController.PreferredDifficulty);
+                            Plugin.instance.loadedLevels = new Queue<IPreviewBeatmapLevel>(playlist);
+
+                            //Ensure the first level is an IBeatmapLevel
+                            var firstBeatmapLevel = Plugin.instance.loadedLevels.First();
+                            if (firstBeatmapLevel is CustomPreviewBeatmapLevel)
+                            {
+                                var result = await SongHelpers.GetLevelFromPreview(firstBeatmapLevel);
+                                if (result != null && !(result?.isError == true))
+                                {
+                                    firstBeatmapLevel = result?.beatmapLevel;
+                                }
+                            }
+
+                            var firstMap = SongHelpers.GetClosestDifficultyPreferLower(firstBeatmapLevel as IBeatmapLevel, centerViewController.PreferredDifficulty);
 
                             SongStitcher.songSwitched -= SongSwitched;
                             SongStitcher.songSwitched += SongSwitched;
@@ -94,24 +104,22 @@ namespace EndlessMode.UI.FlowCoordinators
 
         private void SongFinished(StandardLevelScenesTransitionSetupDataSO sceneTransitionData, LevelCompletionResults results)
         {
-            if (results.levelEndStateType != LevelCompletionResults.LevelEndStateType.Restart) Config.LoadConfig(); //Reset Enabled status we changed above
-
-            if (results.levelEndStateType == LevelCompletionResults.LevelEndStateType.Restart)
-            {
+            if (results.levelEndAction != LevelCompletionResults.LevelEndAction.Restart) Config.LoadConfig(); //Reset Enabled status we changed above
+            else {
                 var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
                 MenuTransitionsHelperSO menuTransitionHelper = Resources.FindObjectsOfTypeAll<MenuTransitionsHelperSO>().FirstOrDefault();
                 menuTransitionHelper.StartStandardLevel(currentMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, "Menu", false, null, SongFinished);
             }
         }
 
-        private void GeneratePlaylistWithMinTime(float minTime, BeatmapDifficulty? difficulty = null, Action<List<IBeatmapLevel>> playlistLoaded = null)
+        private void GeneratePlaylistWithMinTime(float minTime, BeatmapDifficulty? difficulty = null, Action<List<IPreviewBeatmapLevel>> playlistLoaded = null)
         {
             var totalDuration = 0f;
             var pickFrom = new List<IPreviewBeatmapLevel>();
 
             foreach (var pack in beatmapLevelPackCollection.beatmapLevelPacks) pickFrom = pickFrom.Union(pack.beatmapLevelCollection.beatmapLevels).ToList();
 
-            var ret = new List<IBeatmapLevel>();
+            var ret = new List<IPreviewBeatmapLevel>();
 
             Action addAnotherSong = null;
             addAnotherSong = async () => {
@@ -138,33 +146,26 @@ namespace EndlessMode.UI.FlowCoordinators
                     else playlistLoaded(ret);
                 };
 
-                if (!(currentLevel is IBeatmapLevel))
+                if ((currentLevel is PreviewBeatmapLevelSO && await SongHelpers.HasDLCLevel(currentLevel.levelID)) ||
+                        currentLevel is CustomPreviewBeatmapLevel)
                 {
-                    if (await SongHelpers.HasDLCLevel(currentLevel.levelID))
+                    Logger.Debug("Loading DLC/Custom level...");
+                    var result = await SongHelpers.GetLevelFromPreview(currentLevel);
+                    if (result != null && !(result?.isError == true))
                     {
-                        Misc.Logger.Debug("Loading DLC level...");
-                        var result = await SongHelpers.GetDLCLevel(currentLevel);
-                        if (result != null && !(result?.isError == true))
-                        {
-                            SongLoaded(result?.beatmapLevel);
-                        }
-                    }
-                    else
-                    {
-                        Logger.Debug($"Skipping unowned DLC ({currentLevel.songName})");
-                        if (pickFrom.Count > 0) addAnotherSong();
-                        else playlistLoaded(ret);
+                        SongLoaded(result?.beatmapLevel);
                     }
                 }
-                else if (currentLevel is CustomLevel)
-                {
-                    Logger.Debug("Loading custom song data...");
-                    SongLoader.Instance.LoadAudioClipForLevel((CustomLevel)currentLevel, SongLoaded);
-                }
-                else
+                else if (currentLevel is BeatmapLevelSO)
                 {
                     Logger.Debug("Reading OST data without songloader...");
                     SongLoaded(currentLevel as IBeatmapLevel);
+                }
+                else
+                {
+                    Logger.Debug($"Skipping unowned DLC ({currentLevel.songName})");
+                    if (pickFrom.Count > 0) addAnotherSong();
+                    else playlistLoaded(ret);
                 }
             };
 

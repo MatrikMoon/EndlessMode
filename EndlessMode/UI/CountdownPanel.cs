@@ -27,7 +27,7 @@ namespace EndlessMode.UI
             return instance;
         }
 
-        public void LevelsLoaded(Queue<IBeatmapLevel> levels)
+        public void LevelsLoaded(Queue<IPreviewBeatmapLevel> levels)
         {
             Plugin.instance.levelsLoaded -= LevelsLoaded;
 

@@ -27,8 +27,6 @@ namespace EndlessMode.UI.ViewControllers
         private Image progressBarBackground;
         private Button generateButton;
 
-        private RectTransform t;
-
         public enum UIType
         {
             GenerationButton,
@@ -52,7 +50,7 @@ namespace EndlessMode.UI.ViewControllers
                 {
                     PreferredDifficulty = (BeatmapDifficulty)(int)v;
                     Logger.Debug($"Preferred difficulty: {PreferredDifficulty}");
-                }, new Vector2(33, -4));
+                }, new Vector2(20, -4));
 
                 AddMultiSelectOption("Play <i>only</i> Preferred Difficulty", new Dictionary<float, string>
                 {
@@ -62,7 +60,7 @@ namespace EndlessMode.UI.ViewControllers
                 {
                     UseOnlyPreferredDifficulty = v == 1;
                     Logger.Debug($"Use only preferred difficulty: {UseOnlyPreferredDifficulty}");
-                }, new Vector2(33, -18));
+                }, new Vector2(20, -18));
 
                 //Help text
                 var helpText = BeatSaberUI.CreateText(rectTransform, $"Welcome to {Plugin.Name}!\nRemember: <color=\"green\">You can also enable {Plugin.Name} as a Game Option on the left hand panel when you're in the song menu.</color>", new Vector2(0, 20f));
@@ -92,7 +90,6 @@ namespace EndlessMode.UI.ViewControllers
                     if (hours < 9) hours++;
                     UpdateTimeText();
                     
-                    Logger.Debug($"{t.sizeDelta.x} {t.sizeDelta.y}");
                 }, new Vector2(displayPositionX - 15, displayPositionY + 8));
 
                 AddArrowButton(rectTransform, () => {
@@ -225,7 +222,7 @@ namespace EndlessMode.UI.ViewControllers
 
             var nameTextTransform = newListViewController.gameObject.transform.Find("NameText");
             nameTextTransform.localScale = new Vector3(0.85f, 0.85f, 0.85f);
-            nameTextTransform.localPosition += new Vector3(2f, 5f);
+            nameTextTransform.localPosition += new Vector3(57f, 5f);
             (nameTextTransform as RectTransform).sizeDelta = new Vector2(47f, 8f); 
             valueTextTransform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
             valueTextTransform.Find("DecButton").transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);

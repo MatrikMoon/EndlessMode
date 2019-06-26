@@ -3,7 +3,6 @@ using EndlessMode.Misc;
 using EndlessMode.UI;
 using EndlessMode.UI.FlowCoordinators;
 using IPA;
-using SongLoaderPlugin;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,8 +19,8 @@ namespace EndlessMode
         public const string Version = "0.0.7";
 
         public static Plugin instance;
-        public Queue<IBeatmapLevel> loadedLevels;
-        public event Action<Queue<IBeatmapLevel>> levelsLoaded;
+        public Queue<IPreviewBeatmapLevel> loadedLevels;
+        public event Action<Queue<IPreviewBeatmapLevel>> levelsLoaded;
 
         private EndlessModeFlowCoordinator endlessModeFlowCoordinator;
         private MenuButton menuButton;
@@ -65,9 +64,9 @@ namespace EndlessMode
             }
         }
 
-        private void SongsLoaded(SongLoader sender, List<SongLoaderPlugin.OverrideClasses.CustomLevel> loadedSongs)
+        private void SongsLoaded(SongCore.Loader _ , Dictionary<string, CustomPreviewBeatmapLevel> __)
         {
-            SongLoader.SongsLoadedEvent -= SongsLoaded;
+            SongCore.Loader.SongsLoadedEvent -= SongsLoaded;
             if (menuButton != null) menuButton.interactable = true;
         }
 
@@ -90,8 +89,8 @@ namespace EndlessMode
 
             var gameOption = CustomUI.GameplaySettings.GameplaySettingsUI.CreateToggleOption(CustomUI.GameplaySettings.GameplaySettingsPanels.ModifiersLeft, $"Enable {Name}", "When you press play, songs after the song you select will be stitched together into one", null, 0f);
             menuButton = MenuButtonUI.AddButton(Name, $"Open {Name} Menu", () => endlessModeFlowCoordinator.PresentUI(mainFlowCoordinator));
-            menuButton.interactable = SongLoader.AreSongsLoaded;
-            SongLoader.SongsLoadedEvent += SongsLoaded;
+            menuButton.interactable = SongCore.Loader.AreSongsLoaded;
+            SongCore.Loader.SongsLoadedEvent += SongsLoaded;
 
             Config.LoadConfig();
             gameOption.GetValue = Config.Enabled;
@@ -121,23 +120,24 @@ namespace EndlessMode
             //If we're dealing with DLC, we have to load all the levels that the user has
             //now, because loading them mid-Update() would require Update to be async,
             //and *that* would cause multiple level loads to be started before the first level load finishes
-            if (!(newCollection.First() is IBeatmapLevel))
-            {
-                loadedLevels = new Queue<IBeatmapLevel>();
 
-                foreach (var level in newCollection.ToList())
+            var first = newCollection.First();
+            var type = first.GetType();
+    
+            loadedLevels = new Queue<IPreviewBeatmapLevel>();
+
+            foreach (var level in newCollection.ToList())
+            {
+                if (level is PreviewBeatmapLevelSO && await SongHelpers.HasDLCLevel(level.levelID))
                 {
-                    if (await SongHelpers.HasDLCLevel(level.levelID))
+                    var result = await SongHelpers.GetLevelFromPreview(level);
+                    if (result != null && !(result?.isError == true))
                     {
-                        var result = await SongHelpers.GetDLCLevel(level);
-                        if (result != null && !(result?.isError == true))
-                        {
-                            loadedLevels.Enqueue(result?.beatmapLevel);
-                        }
+                        loadedLevels.Enqueue(result?.beatmapLevel);
                     }
                 }
+                else if (level is BeatmapLevelSO || level is CustomPreviewBeatmapLevel) loadedLevels.Enqueue(level);
             }
-            else loadedLevels = new Queue<IBeatmapLevel>(newCollection.Select(x => x as IBeatmapLevel));
 
             foreach (var level in loadedLevels) Logger.Debug($"LOADED LEVEL: {level.songName}");
 

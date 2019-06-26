@@ -1,11 +1,10 @@
 ﻿#pragma warning disable 0649
 
 using EndlessMode.Misc;
-using SongLoaderPlugin;
-using SongLoaderPlugin.OverrideClasses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -17,7 +16,7 @@ namespace EndlessMode
     {
         public static event Action<IDifficultyBeatmap, IDifficultyBeatmap> songSwitched;
 
-        private Queue<IBeatmapLevel> playlist;
+        private Queue<IPreviewBeatmapLevel> playlist;
         private BeatmapDifficulty? preferredDifficulty;
 
         //Stitch related instances
@@ -74,15 +73,15 @@ namespace EndlessMode
             var restartButton = pauseMenuManager.GetField<Button>("_restartButton");
             buttonBinder = new ButtonBinder();
             buttonBinder.AddBinding(restartButton, () => {
-                playlist = new Queue<IBeatmapLevel>(playlist.Prepend(gameplayCoreSceneSetupData.difficultyBeatmap.level));
+                playlist = new Queue<IPreviewBeatmapLevel>(playlist.Prepend(gameplayCoreSceneSetupData.difficultyBeatmap.level));
                 Plugin.instance.loadedLevels = playlist;
             });
         }
 
-        public void LevelsLoaded(Queue<IBeatmapLevel> levels)
+        public void LevelsLoaded(Queue<IPreviewBeatmapLevel> levels)
         {
             Plugin.instance.levelsLoaded -= LevelsLoaded;
-            playlist = new Queue<IBeatmapLevel>(levels);
+            playlist = new Queue<IPreviewBeatmapLevel>(levels);
 
             //Since the first song in the playlist is the current song, we'll skip that
             playlist.Dequeue();
@@ -109,68 +108,66 @@ namespace EndlessMode
                 var playerSpecificSettings = gameplayCoreSceneSetupData.playerSpecificSettings;
                 float songSpeedMul = gameplayModifiers.songSpeedMul;
 
-                IPreviewBeatmapLevel level = playlist.Dequeue();
+                var level = playlist.Dequeue();
+
+                //Load song if it's a custom level
+                if (level is CustomPreviewBeatmapLevel)
+                {
+                    var task = Task.Run(async () => await SongHelpers.GetLevelFromPreview(level));
+                    task.Wait();
+
+                    var result = task.Result;
+
+                    if (result != null && !(result?.isError == true))
+                    {
+                        level = result?.beatmapLevel;
+                    }
+                }
 
                 Logger.Debug($"New song: {level.songName}");
 
-                Action<IBeatmapLevel> SongLoaded = (loadedLevel) =>
+                var oldMap = gameplayCoreSceneSetupData.difficultyBeatmap;
+
+                Logger.Debug($"Getting closest difficulty to {gameplayCoreSceneSetupData.difficultyBeatmap.difficulty} with characteristic {gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic}...");
+                IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(level as IBeatmapLevel, (BeatmapDifficulty)preferredDifficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
+
+                Logger.Debug($"Got: {map.difficulty} ({map.parentDifficultyBeatmapSet.beatmapCharacteristic})");
+
+                gameplayCoreSceneSetupData.SetField("_difficultyBeatmap", map);
+                BeatmapData beatmapData = BeatDataTransformHelper.CreateTransformedBeatmapData(map.beatmapData, gameplayModifiers, gameplayCoreSceneSetupData.practiceSettings, gameplayCoreSceneSetupData.playerSpecificSettings);
+                beatmapDataModel.beatmapData = beatmapData;
+
+                //If this is the last song, set up the viewcontrollers in a way that the proper data is displayed after the song
+                var currentPack = levelDetailViewController.GetField<IBeatmapLevelPack>("_pack");
+                var currentPlayer = levelDetailViewController.GetField<IPlayer>("_player");
+                var currentShowPlayerStats = levelDetailViewController.GetField<bool>("_showPlayerStats");
+                levelDetailViewController.SetData(currentPack, map.level, currentPlayer, currentShowPlayerStats);
+
+                audioTimeSyncController.Init(map.level.beatmapLevelData.audioClip, 0f, map.level.songTimeOffset, songSpeedMul);
+                beatmapObjectSpawnController.Init(level.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : (map.noteJumpMovementSpeed == 0 ? map.difficulty.NoteJumpMovementSpeed() : map.noteJumpMovementSpeed), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
+                pauseMenuManager.Init(map.level.songName, map.level.songSubName, map.difficulty.Name());
+
+                //Deal with characteristic issues
+                Saber.SaberType saberType;
+                if (gameplayCoreSceneSetup.UseOneSaberOnly(map.parentDifficultyBeatmapSet.beatmapCharacteristic, playerSpecificSettings, out saberType))
                 {
-                    var oldMap = gameplayCoreSceneSetupData.difficultyBeatmap;
-
-                    Logger.Debug($"Getting closest difficulty to {gameplayCoreSceneSetupData.difficultyBeatmap.difficulty} with characteristic {gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic}...");
-                    IDifficultyBeatmap map = SongHelpers.GetClosestDifficultyPreferLower(loadedLevel as IBeatmapLevel, (BeatmapDifficulty)preferredDifficulty, gameplayCoreSceneSetupData.difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
-
-                    Logger.Debug($"Got: {map.difficulty} ({map.parentDifficultyBeatmapSet.beatmapCharacteristic})");
-
-                    gameplayCoreSceneSetupData.SetField("_difficultyBeatmap", map);
-                    BeatmapData beatmapData = BeatDataTransformHelper.CreateTransformedBeatmapData(map.beatmapData, gameplayModifiers, gameplayCoreSceneSetupData.practiceSettings, gameplayCoreSceneSetupData.playerSpecificSettings);
-                    beatmapDataModel.beatmapData = beatmapData;
-
-                    //If this is the last song, set up the viewcontrollers in a way that the proper data is displayed after the song
-                    var currentPack = levelDetailViewController.GetField<IBeatmapLevelPack>("_pack");
-                    var currentPlayer = levelDetailViewController.GetField<IPlayer>("_player");
-                    var currentShowPlayerStats = levelDetailViewController.GetField<bool>("_showPlayerStats");
-                    levelDetailViewController.SetData(currentPack, map.level, currentPlayer, currentShowPlayerStats);
-
-                    audioTimeSyncController.Init(map.level.beatmapLevelData.audioClip, 0f, map.level.songTimeOffset, songSpeedMul);
-                    beatmapObjectSpawnController.Init(loadedLevel.beatsPerMinute, beatmapData.beatmapLinesData.Length, gameplayModifiers.fastNotes ? 20f : (map.noteJumpMovementSpeed == 0 ? map.difficulty.NoteJumpMovementSpeed() : map.noteJumpMovementSpeed), map.noteJumpStartBeatOffset, gameplayModifiers.disappearingArrows, gameplayModifiers.ghostNotes);
-                    pauseMenuManager.Init(map.level.songName, map.level.songSubName, map.difficulty.Name());
-
-                    //Deal with characteristic issues
-                    Saber.SaberType saberType;
-                    if (gameplayCoreSceneSetup.UseOneSaberOnly(map.parentDifficultyBeatmapSet.beatmapCharacteristic, playerSpecificSettings, out saberType))
-                    {
-                        gameplayCoreSceneSetup.GetField<PlayerController>("_playerController").AllowOnlyOneSaber(saberType);
-                    }
-                    else
-                    {
-                        gameplayCoreSceneSetup
-                            .GetField<PlayerController>("_playerController")
-                            .GetField<SaberManager>("_saberManager")
-                            .SetField("_allowOnlyOneSaber", false);
-                    }
-
-                    Logger.Debug("Starting new song...");
-                    audioTimeSyncController.StartSong();
-                    Logger.Debug("Song started!");
-
-                    songSwitched?.Invoke(oldMap, map);
-
-                    _loadingSong = false;
-                };
-
-                //Load audio if it's custom
-                if (level is CustomLevel)
-                {
-                    Logger.Debug("Loading custom song data...");
-                    _loadingSong = true;
-                    SongLoader.Instance.LoadAudioClipForLevel((CustomLevel)level, SongLoaded);
+                    gameplayCoreSceneSetup.GetField<PlayerController>("_playerController").AllowOnlyOneSaber(saberType);
                 }
                 else
                 {
-                    Logger.Debug("Starting OST without songloader...");
-                    SongLoaded(level as IBeatmapLevel);
+                    gameplayCoreSceneSetup
+                        .GetField<PlayerController>("_playerController")
+                        .GetField<SaberManager>("_saberManager")
+                        .SetField("_allowOnlyOneSaber", false);
                 }
+
+                Logger.Debug("Starting new song...");
+                audioTimeSyncController.StartSong();
+                Logger.Debug("Song started!");
+
+                songSwitched?.Invoke(oldMap, map);
+
+                _loadingSong = false;
             }
             //else if (audioTimeSyncController.songTime > 10f && (playlist == null || playlist.Count <= 0) && !_loadingSong)
             else if (audioTimeSyncController.songTime >= audioTimeSyncController.songLength - 0.3f && (playlist == null || playlist.Count <= 0))
