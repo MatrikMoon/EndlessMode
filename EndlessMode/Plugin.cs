@@ -16,7 +16,7 @@ namespace EndlessMode
     public class Plugin : IBeatSaberPlugin
     {
         public const string Name = "EndlessMode";
-        public const string Version = "0.0.8";
+        public const string Version = "0.1.1";
 
         public static Plugin instance;
         public Queue<IPreviewBeatmapLevel> loadedLevels;
