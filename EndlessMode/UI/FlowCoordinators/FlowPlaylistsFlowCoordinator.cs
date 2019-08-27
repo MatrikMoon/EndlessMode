@@ -135,8 +135,8 @@ namespace EndlessMode.UI.FlowCoordinators
                     if (difficulty == null ||
                         loadedLevel.beatmapLevelData.difficultyBeatmapSets.Any(x => x.difficultyBeatmaps.Any(y => y.difficulty == difficulty)))
                     {
-                        Logger.Debug($"ADDED: {loadedLevel.songName} ({loadedLevel.songDuration})");
-                        totalDuration += loadedLevel.songDuration;
+                        Logger.Debug($"ADDED: {loadedLevel.songName} ({loadedLevel.songDuration}) (Total time: {totalDuration})");
+                        totalDuration += loadedLevel.beatmapLevelData.audioClip.length;
                         ret.Add(loadedLevel);
 
                         centerViewController.SetProgress(totalDuration / minTime);
