@@ -139,7 +139,7 @@ namespace EndlessMode
 
                 //If this is the last song, set up the viewcontrollers in a way that the proper data is displayed after the song
                 var currentPack = levelDetailViewController.GetField<IBeatmapLevelPack>("_pack");
-                var currentPlayer = levelDetailViewController.GetField<IPlayer>("_player");
+                var currentPlayer = levelDetailViewController.GetField<PlayerData>("_playerData");
                 var currentShowPlayerStats = levelDetailViewController.GetField<bool>("_showPlayerStats");
                 levelDetailViewController.SetData(currentPack, map.level, currentPlayer, currentShowPlayerStats);
 
@@ -206,17 +206,20 @@ namespace EndlessMode
             scoreController.SetField("_playerHeadWasInObstacle", false);
             scoreController.SetField("_immediateMaxPossibleRawScore", 0);
             scoreController.SetField("_cutOrMissedNotes", 0);
-            scoreController.GetField<List<AfterCutScoreBuffer>>("_afterCutScoreBuffers").Clear();
+            scoreController.GetField<List<CutScoreBuffer>>("_cutScoreBuffers").Clear();
 
-            saberActivityCounter.GetField<MovementHistoryRecorder>("_saberMovementHistoryRecorder").SetField("_accum", 0);
-            saberActivityCounter.GetField<MovementHistoryRecorder>("_handMovementHistoryRecorder").SetField("_accum", 0);
+            /*saberActivityCounter.GetField<MovementHistoryRecorder>("_saberMovementHistoryRecorder").SetField("_accum", 0);
+            saberActivityCounter.GetField<MovementHistoryRecorder>("_handMovementHistoryRecorder").SetField("_accum", 0);*/
+
+            saberActivityCounter.SetField("_saberMovementHistoryRecorder", new MovementHistoryRecorder(saberActivityCounter.GetField<float>("_saberActivityCounter"), saberActivityCounter.GetField<float>("_valuesPerSecond"), saberActivityCounter.GetField<float>("_increaseSpeed"), saberActivityCounter.GetField<float>("_deceraseSpeed")));
+            saberActivityCounter.SetField("_handMovementHistoryRecorder", new MovementHistoryRecorder(saberActivityCounter.GetField<float>("_saberActivityCounter"), saberActivityCounter.GetField<float>("_valuesPerSecond"), saberActivityCounter.GetField<float>("_increaseSpeed"), saberActivityCounter.GetField<float>("_deceraseSpeed")));
             saberActivityCounter.SetField("_leftSaberMovementDistance", 0f);
             saberActivityCounter.SetField("_rightSaberMovementDistance", 0f);
             saberActivityCounter.SetField("_leftHandMovementDistance", 0f);
             saberActivityCounter.SetField("_rightHandMovementDistance", 0f);
             saberActivityCounter.SetField("_hasPrevPos", false);
 
-            saberActivityCounter.saberMovementAveragingValueRecorder.GetField<Queue<AveragingValueRecorder.AverageValueData>>("_averageWindowValues").Clear();
+            /*saberActivityCounter.saberMovementAveragingValueRecorder.GetField<Queue<AveragingValueRecorder.AverageValueData>>("_averageWindowValues").Clear();
             saberActivityCounter.saberMovementAveragingValueRecorder.GetField<Queue<float>>("_historyValues").Clear();
             saberActivityCounter.saberMovementAveragingValueRecorder.SetField("_time", 0);
             saberActivityCounter.saberMovementAveragingValueRecorder.SetField("_historyTime", 0);
@@ -230,7 +233,7 @@ namespace EndlessMode
             saberActivityCounter.handMovementAveragingValueRecorder.SetField("_historyTime", 0);
             saberActivityCounter.handMovementAveragingValueRecorder.SetField("_averageValue", 0);
             saberActivityCounter.handMovementAveragingValueRecorder.SetField("_averageWindowValuesDuration", 0);
-            saberActivityCounter.handMovementAveragingValueRecorder.SetField("_lastValue", 0);
+            saberActivityCounter.handMovementAveragingValueRecorder.SetField("_lastValue", 0);*/
 
             noteCutSoundEffectManager.SetField("_prevNoteATime", -1f);
             noteCutSoundEffectManager.SetField("_prevNoteBTime", -1f);
@@ -239,14 +242,12 @@ namespace EndlessMode
             var noteAPool = beatmapObjectSpawnController.GetField<NoteController.Pool>("_noteAPool");
             var noteBPool = beatmapObjectSpawnController.GetField<NoteController.Pool>("_noteBPool");
             var bombNotePool = beatmapObjectSpawnController.GetField<NoteController.Pool>("_bombNotePool");
-            var fullHeightObstaclePool = beatmapObjectSpawnController.GetField<ObstacleController.Pool>("_fullHeightObstaclePool");
-            var topObstaclePool = beatmapObjectSpawnController.GetField<ObstacleController.Pool>("_topObstaclePool");
+            var obstaclePool = beatmapObjectSpawnController.GetField<ObstacleController.Pool>("_obstaclePool");
 
             noteAPool.activeItems.ToList().ForEach(x => beatmapObjectSpawnController.Despawn(x));
             noteBPool.activeItems.ToList().ForEach(x => beatmapObjectSpawnController.Despawn(x));
             bombNotePool.activeItems.ToList().ForEach(x => beatmapObjectSpawnController.Despawn(x));
-            fullHeightObstaclePool.activeItems.ToList().ForEach(x => beatmapObjectSpawnController.Despawn(x));
-            topObstaclePool.activeItems.ToList().ForEach(x => beatmapObjectSpawnController.Despawn(x));
+            obstaclePool.activeItems.ToList().ForEach(x => beatmapObjectSpawnController.Despawn(x));
         }
 
         public virtual void OnDestroy()

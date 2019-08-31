@@ -18,9 +18,10 @@ namespace EndlessMode.UI.FlowCoordinators
         private CenterViewController centerViewController;
 
         private SoloFreePlayFlowCoordinator soloFreePlayFlowCoordinator;
-        private AlwaysOwnedContentModelSO _alwaysOwnedContentModelSO;
+        private AlwaysOwnedContentSO _alwaysOwnedContent;
         private BeatmapLevelCollectionSO _primaryLevelCollection;
         private BeatmapLevelCollectionSO _secondaryLevelCollection;
+        private BeatmapLevelCollectionSO _tertiaryLevelCollection;
         private BeatmapLevelCollectionSO _extrasLevelCollection;
         private IBeatmapLevelPackCollection beatmapLevelPackCollection;
 
@@ -36,10 +37,11 @@ namespace EndlessMode.UI.FlowCoordinators
                 navigationController.didFinishEvent += (_) => mainFlowCoordinator.InvokeMethod("DismissFlowCoordinator", this, null, false);
 
                 if (soloFreePlayFlowCoordinator == null) soloFreePlayFlowCoordinator = Resources.FindObjectsOfTypeAll<SoloFreePlayFlowCoordinator>().First();
-                if (_alwaysOwnedContentModelSO == null) _alwaysOwnedContentModelSO = Resources.FindObjectsOfTypeAll<AlwaysOwnedContentModelSO>().First();
-                if (_primaryLevelCollection == null) _primaryLevelCollection = _alwaysOwnedContentModelSO.alwaysOwnedPacks.First(x => x.packID == "OstVol1").beatmapLevelCollection as BeatmapLevelCollectionSO;
-                if (_secondaryLevelCollection == null) _secondaryLevelCollection = _alwaysOwnedContentModelSO.alwaysOwnedPacks.First(x => x.packID == "OstVol2").beatmapLevelCollection as BeatmapLevelCollectionSO;
-                if (_extrasLevelCollection == null) _extrasLevelCollection = _alwaysOwnedContentModelSO.alwaysOwnedPacks.First(x => x.packID == "Extras").beatmapLevelCollection as BeatmapLevelCollectionSO;
+                if (_alwaysOwnedContent == null) _alwaysOwnedContent = Resources.FindObjectsOfTypeAll<AlwaysOwnedContentSO>().First();
+                if (_primaryLevelCollection == null) _primaryLevelCollection = _alwaysOwnedContent.alwaysOwnedPacks.First(x => x.packID == "OstVol1").beatmapLevelCollection as BeatmapLevelCollectionSO;
+                if (_secondaryLevelCollection == null) _secondaryLevelCollection = _alwaysOwnedContent.alwaysOwnedPacks.First(x => x.packID == "OstVol2").beatmapLevelCollection as BeatmapLevelCollectionSO;
+                if (_tertiaryLevelCollection == null) _tertiaryLevelCollection = _alwaysOwnedContent.alwaysOwnedPacks.First(x => x.packID == "OstVol3").beatmapLevelCollection as BeatmapLevelCollectionSO;
+                if (_extrasLevelCollection == null) _extrasLevelCollection = _alwaysOwnedContent.alwaysOwnedPacks.First(x => x.packID == "Extras").beatmapLevelCollection as BeatmapLevelCollectionSO;
                 if (beatmapLevelPackCollection == null) beatmapLevelPackCollection = soloFreePlayFlowCoordinator.GetField<IBeatmapLevelPackCollection>("_levelPackCollection");
                 if (centerViewController == null)
                 {
@@ -81,7 +83,7 @@ namespace EndlessMode.UI.FlowCoordinators
 
                             var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
                             MenuTransitionsHelperSO menuTransitionHelper = Resources.FindObjectsOfTypeAll<MenuTransitionsHelperSO>().FirstOrDefault();
-                            menuTransitionHelper.StartStandardLevel(firstMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, "Menu", false, null, SongFinished);
+                            menuTransitionHelper.StartStandardLevel(firstMap, null, null, playerDataModel.playerData.gameplayModifiers, playerDataModel.playerData.playerSpecificSettings, null, "Menu", false, null, SongFinished);
                         });
                     };
                 }
@@ -108,7 +110,7 @@ namespace EndlessMode.UI.FlowCoordinators
             else {
                 var playerDataModel = Resources.FindObjectsOfTypeAll<PlayerDataModelSO>().First();
                 MenuTransitionsHelperSO menuTransitionHelper = Resources.FindObjectsOfTypeAll<MenuTransitionsHelperSO>().FirstOrDefault();
-                menuTransitionHelper.StartStandardLevel(currentMap, playerDataModel.currentLocalPlayer.gameplayModifiers, playerDataModel.currentLocalPlayer.playerSpecificSettings, null, "Menu", false, null, SongFinished);
+                menuTransitionHelper.StartStandardLevel(currentMap, null, null, playerDataModel.playerData.gameplayModifiers, playerDataModel.playerData.playerSpecificSettings, null, "Menu", false, null, SongFinished);
             }
         }
 
