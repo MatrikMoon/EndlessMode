@@ -211,8 +211,8 @@ namespace EndlessMode
             /*saberActivityCounter.GetField<MovementHistoryRecorder>("_saberMovementHistoryRecorder").SetField("_accum", 0);
             saberActivityCounter.GetField<MovementHistoryRecorder>("_handMovementHistoryRecorder").SetField("_accum", 0);*/
 
-            saberActivityCounter.SetField("_saberMovementHistoryRecorder", new MovementHistoryRecorder(saberActivityCounter.GetField<float>("_saberActivityCounter"), saberActivityCounter.GetField<float>("_valuesPerSecond"), saberActivityCounter.GetField<float>("_increaseSpeed"), saberActivityCounter.GetField<float>("_deceraseSpeed")));
-            saberActivityCounter.SetField("_handMovementHistoryRecorder", new MovementHistoryRecorder(saberActivityCounter.GetField<float>("_saberActivityCounter"), saberActivityCounter.GetField<float>("_valuesPerSecond"), saberActivityCounter.GetField<float>("_increaseSpeed"), saberActivityCounter.GetField<float>("_deceraseSpeed")));
+            saberActivityCounter.SetField("_saberMovementHistoryRecorder", new MovementHistoryRecorder(saberActivityCounter.GetField<float>("_averageWindowDuration"), saberActivityCounter.GetField<float>("_valuesPerSecond"), saberActivityCounter.GetField<float>("_increaseSpeed"), saberActivityCounter.GetField<float>("_deceraseSpeed")));
+            saberActivityCounter.SetField("_handMovementHistoryRecorder", new MovementHistoryRecorder(saberActivityCounter.GetField<float>("_averageWindowDuration"), saberActivityCounter.GetField<float>("_valuesPerSecond"), saberActivityCounter.GetField<float>("_increaseSpeed"), saberActivityCounter.GetField<float>("_deceraseSpeed")));
             saberActivityCounter.SetField("_leftSaberMovementDistance", 0f);
             saberActivityCounter.SetField("_rightSaberMovementDistance", 0f);
             saberActivityCounter.SetField("_leftHandMovementDistance", 0f);
